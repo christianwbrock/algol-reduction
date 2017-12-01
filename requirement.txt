@@ -1,0 +1,7 @@
+# use with: pip3 install -r requirement.txt
+
+astropy
+matplotlib
+numpy
+scipy
+
