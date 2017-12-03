@@ -27,13 +27,8 @@ class AlgolHAlphaModel(Fittable1DModel):
     sigma = Parameter(default=0.4, min=0.1)
     use_mask = Parameter(default=False, fixed=True)
 
-    _reffile = '../email_Bernd_2016-10-20/Modell-H-alpla-Algol.dat'
-    _reffile = os.path.abspath(_reffile)
-
-    reffilename = os.path.basename(_reffile)
-
-
-    _reference_spectrum = LinearInterpolation(*spectrum.load_from_dat(_reffile))
+    _reference_file = os.path.join(os.path.dirname(__file__), 'Modell-H-alpla-Algol.dat')
+    _reference_spectrum = LinearInterpolation(*spectrum.load_from_dat(_reference_file))
     _reference_spectrum_cache = {}
 
     @staticmethod
@@ -84,3 +79,7 @@ class AlgolHAlphaModel(Fittable1DModel):
     def get_xlimits(self):
         return (AlgolHAlphaModel._reference_spectrum.xmin - self.redshift[0],
                 AlgolHAlphaModel._reference_spectrum.xmax - self.redshift[0])
+
+    @staticmethod
+    def plot(plot):
+        plot.plot(AlgolHAlphaModel._reference_spectrum.xs, AlgolHAlphaModel._reference_spectrum.ys)

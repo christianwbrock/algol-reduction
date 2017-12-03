@@ -3,10 +3,6 @@ from unittest import TestCase
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-import os
-import numpy as np
-from matplotlib import pyplot as plt
-
 from astropy.modeling.fitting import SimplexLSQFitter
 from astropy.time import Time
 import astropy.units as u

@@ -261,5 +261,3 @@ class BinaryOrbit:
         # addx.grid(True)
         plot.legend()
 
-        plot.set_grid()
-

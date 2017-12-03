@@ -1,55 +1,56 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
 from random import random
 
 import numpy as np
-
+from numpy.testing import assert_equal, assert_almost_equal, assert_raises
 
 from reduction.linearinterpolation import LinearInterpolation
 
 
-class LinearInterpolationTest(unittest.TestCase):
-    def test_arg_error_equidist(self):
-        try:
-            LinearInterpolation([1, 2, 4], [7, 8, 9])
-            self.fail("Value Error (about equidistance) was expected")
-        except ValueError:
-            pass
+def single(xs, ys):
+    try:
+        LinearInterpolation(xs, ys)
+        assert False, 'ValueError expected'
+    except ValueError:
+        pass
 
-    def test_arg_error_len(self):
-        try:
-            LinearInterpolation([1, 2, 3], [7, 8])
-            self.fail("Value Error (about length differences) was expected")
-        except ValueError:
-            pass
 
-    def test_apply1(self):
-        f = LinearInterpolation([0, 1], [0, 1])
+def test_arg_error_len():
+    for xs, ys in [[[1, 2, 3], [7, 8]],  # length error
+                   [[1, 2], [7, 8, 9]],  # length error
+                   [[1, 2, 4], [7, 8, 9]],  # not equidistant
+                   ]:
+        yield (single, xs, ys)
 
-        for x in (random() for i in range(200)):
-            self.assertEqual(f(x), x)
 
-    def test_apply2(self):
-        xs = [(-1.0 + 0.1 * i) for i in range(21)]
-        ys = np.sin(xs)
+def test_apply1():
+    f = LinearInterpolation([0, 1], [0, 1])
 
-        f = LinearInterpolation(xs, ys)
+    for x in (random() for i in range(200)):
+        assert_equal(f(x), x)
 
-        self.assertEquals(-1.0, f.xmin)
-        self.assertEquals(+1.0, f.xmax)
-        self.assertEquals(21, f.count)
 
-        for x in ((-1.0 + 0.01 * i) for i in range(201)):
-            expected = np.sin(x)
-            actual = f(x)
+def test_apply2():
+    xs = np.linspace(-1.0, 1.0, 21)
+    ys = np.sin(xs)
 
-            assert (np.fabs(expected - actual) < 0.1)
+    f = LinearInterpolation(xs, ys)
 
-        assert (np.isnan(f(-1.1)))
-        assert (np.isnan(f(+1.1)))
+    assert_equal(-1.0, f.xmin)
+    assert_equal(+1.0, f.xmax)
 
-    def test_list(self):
-        f = LinearInterpolation([0, 1], [0, 1])
-        self.assertEquals([0, 0.5, 1], f([0, 0.5, 1]).tolist())
+    for x in np.linspace(-1, 1, 201):
+        expected = np.sin(x)
+        actual = f(x)
+
+        assert_almost_equal(expected, actual, 1)
+
+    assert (np.isnan(f(-1.1)))
+    assert (np.isnan(f(+1.1)))
+
+
+def test_list():
+    f = LinearInterpolation([0, 1], [0, 1])
+    assert_equal([0, 0.5, 1], f([0, 0.5, 1]))

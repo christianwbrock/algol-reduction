@@ -35,3 +35,15 @@ class Mizar:
 
     def rv_B(self, time):
         return self.rv + self.AB.v2(time)
+
+
+def plot_mizar():
+
+    import matplotlib.pyplot as plt
+
+    mizar = Mizar()
+    mizar.AB.plot_orbit(plt.axes(), mizar.rv)
+    plt.show()
+
+if __name__ == '__main__':
+    plot_mizar()

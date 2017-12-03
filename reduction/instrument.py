@@ -6,7 +6,6 @@ In this module we assume a Gaussian instrument function
 
 from math import ceil
 
-import numpy as np
 from astropy.units import Unit
 
 from astropy.convolution import Gaussian1DKernel
@@ -29,7 +28,7 @@ def convolve_with_gauss(f, stddev_AA):
     kernel = Gaussian1DKernel(stddev_px, x_size=x_size)
 
     xs = f.xs
-    ys = convolve(f.ys, kernel=kernel, boundary='none')
+    ys = convolve(f.ys, kernel=kernel, boundary=None)
 
     assert len(xs) == len(ys)
 
@@ -41,6 +40,7 @@ def convolve_with_gauss(f, stddev_AA):
     assert len(xs) == len(ys)
 
     return LinearInterpolation(xs, ys)
+
 
 def deconvolute_with_gauss(xs, ys, sigma):
     raise NotImplemented
