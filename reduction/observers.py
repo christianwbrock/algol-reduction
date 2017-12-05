@@ -124,14 +124,14 @@ class Observer:
         addy = plot.twinx()
 
         v1 = self.heliocentric_correction(t, sky_coord)
-        plot.plot(t.jd, v1, label=self.name)
+        plot.plot(t.plot_date, v1, label=self.name)
 
         if v0:
             v_0 = np.ones(t.size) * v0
-            plot.plot(t.jd, v_0, label=r'%.0f %s' % (v0.to('km/s').value, v0.to('km/s').unit))
+            plot.plot(t.plot_date, v_0, label=r'%.0f %s' % (v0.to('km/s').value, v0.to('km/s').unit))
 
         # assure both x-scales match
-        plot.set_xlim((t0 - 0.1 * p).jd, (t0 + 1.1 * p).jd)
+        plot.set_xlim((t0 - 0.1 * p).plot_date, (t0 + 1.1 * p).plot_date)
         addx.set_xlim(- (0.1 * p).to(u.day).value, (1.1 * p).to(u.day).value)
 
         # convert radial velocity to red-shift at H_alpha
@@ -140,20 +140,12 @@ class Observer:
         l_max = (v_max / const.c).to(1) * H_ALPHA
         addy.set_ylim(l_min.value, l_max.value)
 
-        plot.xaxis.set_major_locator(plt.MaxNLocator(5))
-        # plot.xaxis.set_major_locator(plt.MultipleLocator(10))
-        plot.xaxis.set_minor_locator(plt.MultipleLocator(1))
-        plot.xaxis.set_major_formatter(plt.FormatStrFormatter('%.0f'))
-
-        # addx.xaxis.set_minor_locator(plt.MultipleLocator(0.1))
-
-
         plot.set_ylabel('Radial velocity (km/s)')
-        plot.set_xlabel('Julian date')
+        plot.set_xlabel('Date')
         addx.set_xlabel('Days')
         addy.set_ylabel(r'$\delta\lambda \| H\alpha (\AA)$')
         addx.grid(True)
-        plot.legend()
+        addy.grid(True)
 
 bernd = Observer("Bernd", 51.003557, 13.708425, 270)
 christian = Observer(r"Gönnsdorf", 51, 13.7, 300)

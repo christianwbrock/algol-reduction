@@ -23,7 +23,7 @@ from icalendar import Calendar, Event
 #from reduction.stars.delcep import delcep_GCVS as target
 # target_name = 'Delta Cephei'
 
-from reduction.stars.algol import algol_Kosmos as target
+from reduction.stars.algol import kosmos_himmeljahr as target
 target_name = 'Algol'
 
 

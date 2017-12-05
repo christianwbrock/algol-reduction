@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 import numpy as np
 
 from astropy.time import Time
+from astropy.coordinates import SkyCoord
+from astropy.coordinates import EarthLocation
+
 import astropy.units as u
 
 import math
@@ -23,32 +26,44 @@ class VariableObject(object):
     """
 
     def __init__(self, authority=None, coordinate=None):
+        """
+        Initialize an observable object having a phase per time function
+
+        :param authority: who measured the parameters
+        :param coordinate: SkyCoord of the object
+        """
+
         self.authority = authority
         self.coordinate = coordinate
 
-    def to_1(self, time, observer=None):
+        if not coordinate:
+            logger.error('Missing parameter coordinate required to compute radial_velocity_correction')
+        else:
+            assert isinstance(coordinate, SkyCoord)
+
+    def to_1(self, time, location=None):
         raise NotImplemented
 
-    def to_time(self, val, observer=None):
+    def to_time(self, val, location=None):
         raise NotImplemented
 
-    def phase_at(self, time, observer=None):
-        return self.to_1(time, observer=observer) % 1.0
+    def phase_at(self, time, location=None):
+        return self.to_1(time, location=location) % 1.0
 
-    def period_at(self, time, observer=None):
-        return int(self.to_1(time, observer=observer))
+    def period_at(self, time, location=None):
+        return int(self.to_1(time, location=location))
 
-    def next_after(self, time, next_, observer=None):
-        current = self.to_1(time, observer=observer)
+    def next_after(self, time, next_, location=None):
+        current = self.to_1(time, location=location)
         diff = (next_ - current) % 1.0
         assert 0 <= diff <= 1
-        return self.to_time(current + diff, observer=observer)
+        return self.to_time(current + diff, location=location)
 
-    def previous_before(self, time, previous, observer=None):
-        current = self.to_1(time, observer=observer)
+    def previous_before(self, time, previous, location=None):
+        current = self.to_1(time, location=location)
         diff = (previous - current) % 1.0
         assert 0 <= diff <= 1
-        return self.to_time(current - previous, observer=observer)
+        return self.to_time(current - previous, location=location)
 
     def plot_line(self, plot, color, t0, t1, y, dy=0.1):
         assert isinstance(t0, Time)
@@ -64,35 +79,51 @@ class VariableObject(object):
 
             plot.scatter(x.jd, y, color=color)
 
-    def plot(self, plot, t0, t1, num=401):
+    def plot(self, plot, t0, t1, num=401, location=None):
         assert isinstance(t0, Time)
         assert isinstance(t1, Time)
 
         ts = Time(np.linspace(t0.jd, t1.jd, num=num), format='jd')
 
         def sin(t):
-            return math.sin(self.to_1(t) * 2 * np.pi)
+            return math.sin(self.to_1(t, location) * 2 * np.pi)
 
-        x = [t.jd for t in ts]
+        x = [t.plot_date for t in ts]
         y = [sin(t) for t in ts]
 
         plot.plot(x, y, label=self.authority)
 
 
 class RegularVariableObject(VariableObject):
-    
+    """
+    Initialize an observable object having a phase per time function
+
+    :param authority: who measured the parameters
+    :param coordinate: SkyCoord of the object
+    :param epoch: time when an maxima or minima was observed
+    :param period: time range between maxima or minima
+    :param assume_radial_velocity_correction: assume that epoch is radial velocite corrected
+    """
+
     @u.quantity_input(period=u.day)
-    def __init__(self, epoch, period, authority=None, coordinate=None):
+    def __init__(self, epoch, period, authority=None, coordinate=None,
+                 assume_radial_velocity_correction=True, location=None):
         super().__init__(authority, coordinate)
 
         if not isinstance(epoch, Time):
             epoch = Time(epoch)
 
-        self.epoch = epoch
+        corr = 0 * u.second if assume_radial_velocity_correction else \
+            epoch.light_travel_time(coordinate, location=location)
+
+        self.epoch = epoch - corr
         self.period = period
 
-    def to_1(self, time, observer=None):
-        return ((time - self.epoch) / self.period).to(1).value
+    def to_1(self, time, location=None):
+        corr = time.light_travel_time(self.coordinate, location=location)
+        return ((time + corr - self.epoch) / self.period).to(1).value
 
-    def to_time(self, val, observer=None):
-        return self.epoch + val * self.period
+    def to_time(self, val, location=None):
+        time = self.epoch + val * self.period
+        corr = time.light_travel_time(self.coordinate, location=location)
+        return time - corr
