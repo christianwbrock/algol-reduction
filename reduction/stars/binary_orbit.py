@@ -227,11 +227,11 @@ class BinaryOrbit:
         addy = plot.twinx()
 
         v_1 = self.v1(t).to('km/s')
-        if v0: v_1 += v0
+        v_1 += v0 or 0
         plot.plot(t.jd, v_1, label=('%s m1=%.1f' % (self.name1, self.m1.value)))
 
         v_2 = self.v2(t).to('km/s')
-        if v0: v_2 += v0
+        v_2 += v0 or 0
         plot.plot(t.jd, v_2, label=('%s m2=%.1f' % (self.name2, self.m2.value)))
 
         if v0:

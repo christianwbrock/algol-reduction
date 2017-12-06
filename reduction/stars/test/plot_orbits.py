@@ -28,5 +28,6 @@ def plot_orbits_by_m2():
     axes.set_title('masses, I=83')
     plt.show()
 
+
 if __name__ == '__main__':
     plot_orbits_by_m2()

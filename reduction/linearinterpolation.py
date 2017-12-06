@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 
+
 class LinearInterpolation:
     """
         We often encounter columnar data  where one column defines
@@ -28,7 +29,6 @@ class LinearInterpolation:
 
             if abs(expected - actual) * 1000 > self.dx:
                 raise ValueError("xs are not equidistant")
-
 
     @property
     def xmin(self):

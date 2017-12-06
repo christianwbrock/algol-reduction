@@ -3,13 +3,15 @@ from astropy.coordinates import SkyCoord
 from astropy.time import Time
 
 from reduction.stars.binary_orbit import BinaryOrbit
+from reduction.stars.variable_stars import RegularVariableObject
+
+mizar = RegularVariableObject(Time(2447636.07, format='jd'), 20.53835 * u.day, "Ulrich Waldschlaeger",
+                              coordinate=SkyCoord("+13h23m55.5s +54d55m31s", frame='icrs'))
 
 
 class Mizar:
 
     def __init__(self):
-
-        self.coordinate = SkyCoord("+13h23m55.5s +54d55m31s", frame='icrs')
 
         self.rv = -6.31 * u.km / u.s
         # radial_velocity_error = 0 * kms
@@ -44,6 +46,7 @@ def plot_mizar():
     mizar = Mizar()
     mizar.AB.plot_orbit(plt.axes(), mizar.rv)
     plt.show()
+
 
 if __name__ == '__main__':
     plot_mizar()

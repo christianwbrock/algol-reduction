@@ -34,6 +34,7 @@ def plot_normalization(filenames):
 
     plt.show()
 
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 

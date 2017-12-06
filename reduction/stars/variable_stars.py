@@ -47,6 +47,10 @@ class VariableObject(object):
     def to_time(self, val, location=None):
         raise NotImplemented
 
+    def light_travel_time(self, time, coordinate, location=None):
+        location = location or EarthLocation.from_geodetic(0, 45)
+        return time.light_travel_time(coordinate, kind='barycentric', location=location)
+
     def phase_at(self, time, location=None):
         return self.to_1(time, location=location) % 1.0
 
@@ -65,28 +69,28 @@ class VariableObject(object):
         assert 0 <= diff <= 1
         return self.to_time(current - previous, location=location)
 
-    def plot_line(self, plot, color, t0, t1, y, dy=0.1):
+    def plot_line(self, plot, color, t0, t1, y, location=None):
         assert isinstance(t0, Time)
         assert isinstance(t1, Time)
 
         plot.axhline(y=y, xmin=t0.jd, xmax=t1.jd, color=color, label=self.authority)
 
-        first = self.period_at(t0)
-        last = self.period_at(t1)
+        first = self.period_at(t0, location)
+        last = self.period_at(t1, location)
 
         for i in range(first, last + 1):
-            x = self.to_time(i)
+            x = self.to_time(i, location)
 
             plot.scatter(x.jd, y, color=color)
 
-    def plot(self, plot, t0, t1, num=401, location=None):
+    def plot(self, plot, t0, t1, num=401):
         assert isinstance(t0, Time)
         assert isinstance(t1, Time)
 
         ts = Time(np.linspace(t0.jd, t1.jd, num=num), format='jd')
 
         def sin(t):
-            return math.sin(self.to_1(t, location) * 2 * np.pi)
+            return math.sin(self.to_1(t) * 2 * np.pi)
 
         x = [t.plot_date for t in ts]
         y = [sin(t) for t in ts]
@@ -114,16 +118,34 @@ class RegularVariableObject(VariableObject):
             epoch = Time(epoch)
 
         corr = 0 * u.second if assume_radial_velocity_correction else \
-            epoch.light_travel_time(coordinate, location=location)
+            self.light_travel_time(epoch, self.coordinate, location=location)
 
         self.epoch = epoch - corr
         self.period = period
 
     def to_1(self, time, location=None):
-        corr = time.light_travel_time(self.coordinate, location=location)
+        """
+        Return the number of period since epoch.
+
+        :param time: Observation time will be corrected
+        :param location: Location of the observer, defaults to Greenwich
+            For an earth bound observer passign a location makes no sense.
+        :return: the number of period since epoch.
+        """
+        corr = self.light_travel_time(time, self.coordinate, location=location)
         return ((time + corr - self.epoch) / self.period).to(1).value
 
     def to_time(self, val, location=None):
+        """
+        For a given number of periods since epoch.
+
+        :param val:
+        :param location:
+        :return:
+        """
         time = self.epoch + val * self.period
-        corr = time.light_travel_time(self.coordinate, location=location)
+        corr = self.light_travel_time(time, self.coordinate, location=location)
         return time - corr
+
+    def __repr__(self):
+        return "%s says that epoch: %s, period: %s, pos: %s" % (self.authority, self.epoch, self.period, self.coordinate)

@@ -1,6 +1,7 @@
 
 from math import isnan
 
+
 def nan_leastsquare(measured_vals, updated_model, weights, x, y=None):
     """
     Least square statistic with optional weights.

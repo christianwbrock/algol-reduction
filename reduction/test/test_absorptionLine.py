@@ -68,7 +68,7 @@ class TestAbsorptionLine(TestCase):
             else:
                 weights = 1.0
 
-            final = fitter(initial, xs, ys , weights=weights)
+            final = fitter(initial, xs, ys, weights=weights)
 
             # Make sure we disable masking for the result plot
             final.use_mask = False

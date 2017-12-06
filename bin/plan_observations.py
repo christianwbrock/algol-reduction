@@ -4,31 +4,78 @@ For a peridic star we want to shedule observations for a given time period.
 """
 
 import logging
-from tkinter import Variable
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 import sys
+import os.path
+from collections import namedtuple
+
 import numpy as np
 
-from datetime import timezone
 from astropy.time import Time
+from astropy.coordinates import EarthLocation, Latitude, Longitude
 import astropy.units as u
 
 from astroplan import Observer, MAGIC_TIME
 
 from icalendar import Calendar, Event
 
-# from reduction.stars.delcep import delcep_Josi as target
-#from reduction.stars.delcep import delcep_GCVS as target
-# target_name = 'Delta Cephei'
 
-from reduction.stars.algol import kosmos_himmeljahr as target
-target_name = 'Algol'
+def create_shedule(filename=None):
+
+    # from reduction.stars.delcep import delcep_GCVS as target
+    # from reduction.stars.delcep import josi as target
+    # target_name = 'Delta Cephei'
+
+    from reduction.stars.algol import filipe_diaz as target
+    target_name = 'Algol_Armacao'
+
+    # from reduction.stars.mizar import mizar as target
+    # target_name = 'Mizar_Marzahn'
+
+    # from reduction.observers import christian, ulrich, filipe
+    from reduction.observers import filipe as location
+
+    # from reduction.stars.mizar import mizar as target
+    # target_name = 'Mizar'
+
+    phases = [0.0]
+
+    start_time = Time.now()
+    end_time = Time.now() + 366 * u.day
+
+    # do not change below ---------------
+
+    filename = filename or os.path.abspath(os.path.relpath(
+        target_name.lower().replace(' ', '', -1) + '.ics'))
+
+    observer = Observer(name="", location=location)
+
+    logger.info("Time: %s -> %s", start_time, end_time)
+    logger.info("Observer: %s", observer)
+    logger.info("Star: %s", target)
+
+    nights = get_nights(observer, start_time, end_time)
+
+    time_above = get_time_above_horizon(observer, start_time, end_time, target.coordinate)
+
+    obs_times = intersection(nights, time_above)
+
+    if phases:
+        phase_times = get_phases(phases, start_time, end_time, target)
+        obs_times = intersection(obs_times, phase_times)
+
+    observations = calculate_schedule(observer, obs_times, target)
+    if filename:
+        display_ical(filename, observer, observations, target_name)
 
 
 @u.quantity_input(horizon=u.degree)
 def get_nights(observer, start_time, end_time, horizon=-12*u.degree):
+
+    logger.info("Calculate nights")
     
     if observer.is_night(start_time, horizon=horizon):
         dusk = start_time
@@ -58,6 +105,8 @@ def get_nights(observer, start_time, end_time, horizon=-12*u.degree):
 @u.quantity_input(time_range=u.day, horizon=u.degree)
 def get_time_above_horizon(observer, start_time, end_time, target_coordinate, horizon=+30*u.degree):
     
+    logger.info("Calculate target time above horizon.")
+
     target_is_up = observer.target_is_up(start_time, target_coordinate, horizon=horizon)
     if target_is_up:
         dusk = start_time
@@ -90,6 +139,8 @@ def get_time_above_horizon(observer, start_time, end_time, target_coordinate, ho
 @u.quantity_input(time_range=u.day)
 def get_phases(phase, start_time, end_time, variable_star):
     
+    logger.info("Calculate observation phases.")
+
     if not isinstance(start_time, Time):
         start_time = Time(start_time)
 
@@ -103,7 +154,7 @@ def get_phases(phase, start_time, end_time, variable_star):
     if isinstance(phase[0], list):
         
         for ph in phase:
-            result += get_phases(ph, start_time, end_time, epoch, period)
+            result += get_phases(ph, start_time, end_time, variable_star.epoch, variable_star.period)
             
     else:
 
@@ -113,7 +164,8 @@ def get_phases(phase, start_time, end_time, variable_star):
         elif len(phase) == 1:
             phase_0 = phase_1 = phase[0]
 
-        elif len(phase) >= 2:
+        else:
+            assert len(phase) >= 2
             phase_0 = phase[0]
             phase_1 = phase[1]
 
@@ -163,7 +215,7 @@ def intersection(list0, list1):
     for r0 in list0:
         for r1 in list1:
             inters = _single_intersection(r0, r1)
-            if (inters):
+            if inters:
                 result.append(inters)
     
     return result
@@ -205,7 +257,7 @@ def _altaz(observer, coordinate, t0, t1, num=10):
     alt = np.asarray(np.round(alt), dtype=int)
 
     # determine first, last min and max position
-    idx = set([0, len(alt)-1])
+    idx = {0, len(alt)-1}
     idx.add(np.argmin(alt))
     idx.add(np.argmax(alt))
     assert 2 <= len(idx) <= 4
@@ -224,71 +276,58 @@ def _altaz(observer, coordinate, t0, t1, num=10):
     return "%s, %s deg" % (str_az, str_alt)
 
 
-@u.quantity_input(period=u.day)
-def display_schedule(observer, coordinate, obs_times):
-    
+Observation = namedtuple('Observation', 'nbr ph0 ph1 t0 t1 comment')
+
+
+def calculate_schedule(observer, obs_times, target):
+
+    result = []
+
     for i, obs in enumerate(obs_times):
-        assert isinstance(obs[0], Time)
-        assert isinstance(obs[1], Time)
+        t0 = obs[0]
+        t1 = obs[1]
 
-        ph0 = target.phase_at(obs[0])
-        ph1 = target.phase_at(obs[1])
-        
-        aa = _altaz(observer, coordinate, obs[0], obs[1])
+        assert isinstance(t0, Time)
+        assert isinstance(t1, Time)
 
-        logger.info("%2d: %.2f .. %.2f: %s .. %s   %s", i, ph0, ph1, obs[0].iso[0:16], obs[1].iso[11:16], aa)
+        ph0 = target.phase_at(t0, location=observer.location)
+        ph1 = target.phase_at(t1, location=observer.location)
+
+        comment = _altaz(observer, target.coordinate, t0, t1)
+
+        logger.info("%2d: %.2f .. %.2f: %s .. %s   %s", i, ph0, ph1, t0.iso[0:16], t1.iso[11:16], comment)
+
+        result.append(Observation(i, ph0, ph1, t0, t1, comment))
+
+    return result
+
+
+def display_schedule(observations):
+    for obs in observations:
+        assert isinstance(obs, Observation)
+        logger.info("%2d: %.2f .. %.2f: %s .. %s   %s",
+                    obs.nbr, obs.ph0, obs.ph1, obs.t0.iso[0:16], obs.t1.iso[11:16], obs.comment)
     
 
 @u.quantity_input(period=u.day)
-def display_ical(filename, observer, coordinate, obs_times):
+def display_ical(filename, observer, observations, target_name):
+
+    logger.info('Write to \'%s\'', filename)
     
     cal = Calendar()
     cal['summary'] = target_name
     
-    for i, obs in enumerate(obs_times):
-        assert isinstance(obs[0], Time)
-        assert isinstance(obs[1], Time)
-
-        ph0 = target.phase_at(obs[0])
-        ph1 = target.phase_at(obs[1])
-
-        aa = _altaz(observer, coordinate, obs[0], obs[1])
-
+    for obs in observations:
         event = Event()
-        event.add('DTSTART', obs[0].to_datetime(observer.timezone))
-        event.add('DTEND', obs[1].to_datetime(observer.timezone))
-        event.add('SUMMARY', "%s Phase %.2f .. %.2f" % (target_name, ph0, ph1))
-        event.add('DESCRIPTION', aa)
+        event.add('DTSTART', obs.t0.to_datetime(observer.timezone))
+        event.add('DTEND', obs.t1.to_datetime(observer.timezone))
+        event.add('SUMMARY', "%s Phase %.2f .. %.2f" % (target_name, obs.ph0, obs.ph1))
+        event.add('DESCRIPTION', obs.comment)
         
         cal.add_component(event)
     
     with open(filename, 'wb') as file:
         file.write(cal.to_ical())
-
-
-def create_shedule(filename = None):
-    observer = Observer(name='Dresden Goennsdorf',
-                        latitude=51.0 * u.degree, longitude=13.0 * u.degree,
-                        elevation=230.0 * u.meter)
-
-    start_time = Time.now()
-    end_time = Time.now() + 66 * u.day
-
-    nights = get_nights(observer, start_time, end_time)
-
-    phases = None  # [0.0]
-
-    time_above = get_time_above_horizon(observer, start_time, end_time, target.coordinate)
-
-    obs_times = intersection(nights, time_above)
-
-    if phases:
-        phase_times = get_phases(phases, start_time, end_time, target)
-        obs_times = intersection(obs_times, phase_times)
-
-    display_schedule(observer, target.coordinate, obs_times)
-    if filename:
-        display_ical(filename, observer, target.coordinate, obs_times)
 
 
 if __name__ == '__main__':

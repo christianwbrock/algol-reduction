@@ -1,5 +1,5 @@
 import logging
-logger =logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 import numpy as np
 
@@ -34,7 +34,7 @@ def fit_polynomial(xs, ys, deg, ranges):
     xs = xs[mask]
 
     params = np.polyfit(xs, ys, deg)
-    logger.debug("polynomial params: %s" % params)
+    logger.debug("polynomial params: %s", params)
 
     return np.poly1d(params)
 
@@ -95,8 +95,8 @@ def plot_normalized(filename, ranges, degrees, plot):
 
     for deg in degrees:
         poly = fit_polynomial(xs, y1, deg, ranges)
-        plot.plot(xs, [poly(x) for x in xs], label="poly_%d" % (deg))
+        plot.plot(xs, [poly(x) for x in xs], label="poly_%d" % deg)
 
         yn = normalize(xs, ys, deg, ranges)
-        plot.plot(xs, yn, label="norm_%d" % (deg))
+        plot.plot(xs, yn, label="norm_%d" % deg)
 

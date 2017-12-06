@@ -103,7 +103,7 @@ def plot_algol():
 
     algol = Algol()
 
-    fig = plt.figure(figsize=(6,9))
+    fig = plt.figure(figsize=(6, 9))
     fig.subplots_adjust(hspace=0.6)
 
     # algol.AB.plot_orbit(fig.add_subplot(311), algol.rv)
@@ -120,19 +120,17 @@ def plot_comparison():
     import matplotlib.pyplot as plt
     from matplotlib.dates import AutoDateFormatter, AutoDateLocator
 
-    christian = EarthLocation(lat=13*u.degree, lon=51*u.degree)
-
     axes = plt.axes()
 
     now = Time.now()
-    than = now + 3 *u.day
+    than = now + 3 * u.day
 
     plt.axhline(y=0)
 
     for var in [unknown, kosmos_himmeljahr, interstellarum, filipe_diaz, gcvs,
                 zavala_2010, zavala2010_via_aaron2012, baron2012,
                 aavso_my, aavso_self]:
-        var.plot(axes, now, than, location=christian)
+        var.plot(axes, now, than)
 
     locator = AutoDateLocator()
     axes.xaxis.set_major_locator(locator)
