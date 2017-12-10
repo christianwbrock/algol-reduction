@@ -38,7 +38,7 @@ def load_from_dat(filename):
     xs = data[begin:end, 0]
     ys = data[begin:end, 1]
 
-    return xs, ys
+    return xs, ys, None
 
 
 def _fix_date_str(date_str):
@@ -107,7 +107,7 @@ def load_from_fit(arg):
 
     if isinstance(arg, str):
         with fits.open(arg) as hdu:
-            logger.debug("filename: %s", arg)
+            logger.debug("load_from_fit(%s)", arg)
             return load_from_fit(hdu)
 
     if isinstance(arg, list):
@@ -128,11 +128,22 @@ def load_from_fit(arg):
     nbr_meas = header["NAXIS1"]
     lambda_0 = header["CRVAL1"]
     delta_lambda = header["CDELT1"]
-
-    unit = header.get("CUNIT1") or "Angstrom"
+    unit = header.get("CUNIT1")
 
     assert len(data) == nbr_meas, "header field NAXIS1 %d does not match data size %d" % (nbr_meas, len(data))
 
     wavelength = np.array([lambda_0 + i * delta_lambda for i in range(nbr_meas)])
 
     return wavelength, data, unit
+
+
+def load(arg):
+    """
+    First tries load_from_fits and when that fails load_from_dat
+    :param arg: fits or dat file
+    :return: spectrum
+    """
+    try:
+        return load_from_fit(arg)
+    except:
+        return load_from_dat(arg)

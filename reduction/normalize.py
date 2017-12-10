@@ -82,9 +82,11 @@ def normalize(xs, ys, deg, ranges):
 
 def plot_normalized(filename, ranges, degrees, plot):
 
-    from reduction.spectrum import load_from_fit
+    from reduction.spectrum import load
 
-    xs, ys, unit = load_from_fit(filename)
+    xs, ys, unit = load(filename)
+    xs = xs[15:-15]
+    ys = ys[15:-15]
 
     y1 = 0.6 * ys / ys.max()
     plot.plot(xs, y1, label="orig")
