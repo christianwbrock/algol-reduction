@@ -5,7 +5,7 @@ Given a single spectrum, display all x-ranges within [0.99 y-max .. ymax]
 """
 
 from reduction.spectrum import load
-from reduction.normalize import plot_normalized
+from reduction.normalize import plot_normalized_args, arg_parser as normalization_parser
 
 from argparse import ArgumentParser
 import os.path
@@ -17,13 +17,11 @@ logger = logging.getLogger(__name__)
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description='Display normalized spectrum using continuum ranges.',
-                            epilog='''An easy way to generate contimuum ranges is to use
-                            Richard O. Grays spectrum software and the extract_continuum ranges.py script.''')
+    parser = ArgumentParser(parents=[normalization_parser],
+                            description='Display normalized spectrum using continuum ranges.',
+                            epilog='An easy way to generate contimuum ranges is to use Richard O. Grays spectrum software and the extract_continuum ranges.py script.')
+
     parser.add_argument('filenames', nargs='+', metavar='spectrum.fit', help='one or more spectrum file')
-    parser.add_argument('--degree', '-d', type=int, default=3)
-    parser.add_argument('--continuum-range', '-c', dest='ranges', nargs=2, type=float, metavar=('xmin, xmax'),
-                        action='append', required=True)
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--quiet', '-q', action='count', default=0)
 
@@ -33,8 +31,7 @@ if __name__ == '__main__':
     axes = plt.axes()
 
     for filename in args.filenames:
-
-        plot_normalized(filename, args.ranges, [args.degree], axes)
+        plot_normalized_args(axes, filename, args)
 
     axes.legend()
     plt.show()
