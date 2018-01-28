@@ -47,9 +47,14 @@ class VariableObject(object):
     def to_time(self, val, location=None):
         raise NotImplemented
 
-    def light_travel_time(self, time, coordinate, location=None):
-        location = location or EarthLocation.from_geodetic(0, 45)
-        return time.light_travel_time(coordinate, kind='barycentric', location=location)
+    # noinspection PyMethodMayBeStatic
+    def _light_travel_time(self, observation_time: Time, sky_coordinate: SkyCoord, observer_location=None):
+        """"
+        Due to the rotation around the sun, light from the target reaches earth sooner or later in a given six month
+        period. Subclasses may be modify/disable this light_travel_time correction by overriding this method.
+        """
+        observer_location = observer_location or observation_time.location or EarthLocation.from_geocentric(0, 0, 0, u.meter)
+        return observation_time.light_travel_time(sky_coordinate, kind='barycentric', location=observer_location)
 
     def phase_at(self, time, location=None):
         return self.to_1(time, location=location) % 1.0
@@ -118,7 +123,7 @@ class RegularVariableObject(VariableObject):
             epoch = Time(epoch)
 
         corr = 0 * u.second if assume_radial_velocity_correction else \
-            self.light_travel_time(epoch, self.coordinate, location=location)
+            self._light_travel_time(epoch, self.coordinate, observer_location=location)
 
         self.epoch = epoch - corr
         self.period = period
@@ -132,7 +137,7 @@ class RegularVariableObject(VariableObject):
             For an earth bound observer passign a location makes no sense.
         :return: the number of period since epoch.
         """
-        corr = self.light_travel_time(time, self.coordinate, location=location)
+        corr = self._light_travel_time(time, self.coordinate, observer_location=location)
         return ((time + corr - self.epoch) / self.period).to(1).value
 
     def to_time(self, val, location=None):
@@ -144,7 +149,7 @@ class RegularVariableObject(VariableObject):
         :return:
         """
         time = self.epoch + val * self.period
-        corr = self.light_travel_time(time, self.coordinate, location=location)
+        corr = self._light_travel_time(time, self.coordinate, observer_location=location)
         return time - corr
 
     def __repr__(self):

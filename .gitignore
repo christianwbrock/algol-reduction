@@ -1,3 +1,7 @@
 **/*.pyc
 .idea
 .cache
+build/
+dist/
+reduction.egg-info/
+

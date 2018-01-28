@@ -10,9 +10,9 @@ arg_parser = ArgumentParser(add_help=False)
 """
 Use this parser as parent parser in client command line scripts.
 """
-arg_parser.add_argument('--degree', '-d', type=int, default=3, help='degree of the polynomila to be fitted')
-arg_parser.add_argument('--continuum-range', '-c', dest='ranges', nargs=2, type=float, metavar=('xmin, xmax'),
-                    action='append', required=True, help='continuum range(es) used for the polynomial fit')
+arg_parser.add_argument('-d', '--degree', type=int, default=3, help='degree of the polynomial to be fitted')
+arg_parser.add_argument('-c', '--continuum-range', dest='ranges', nargs=2, type=float, metavar=('xmin', 'xmax'),
+                    action='append', required=True, help='one or more continuum ranges used for the polynomial fit')
 arg_parser.add_argument('--method', choices=['hermit', 'polynomial'], default='polynomial')
 
 

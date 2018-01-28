@@ -2,6 +2,8 @@ import os.path
 
 import numpy as np
 
+from astropy import units as u
+from astropy.units import Quantity
 from astropy.modeling import Fittable1DModel
 from astropy.modeling.parameters import Parameter
 
@@ -28,8 +30,15 @@ class AlgolHAlphaModel(Fittable1DModel):
     use_mask = Parameter(default=False, fixed=True)
 
     _reference_file = os.path.join(os.path.dirname(__file__), 'Modell-H-alpla-Algol.dat')
-    _reference_spectrum = LinearInterpolation(*spectrum.load_from_dat(_reference_file))
+    _reference_spectrum = LinearInterpolation(*spectrum.load_from_dat(_reference_file)[:2])
     _reference_spectrum_cache = {}
+
+    def __init__(self, **kwargs):
+        args = {'redshift': u.AA, 'sigma': u.AA}
+
+        for k, v in kwargs.items():
+            if k in args and v instanceof Quantity:
+                kwargs[k] =
 
     @staticmethod
     def _get_ref(sigma):

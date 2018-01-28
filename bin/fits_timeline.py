@@ -6,66 +6,61 @@ and store them in fits files having observer and date-obs header fields
 we want to know what phases we have covered.
 """
 
-import logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+from typing import *
 
 import matplotlib.pyplot as plt
 from matplotlib.dates import AutoDateFormatter, AutoDateLocator
 
-import numpy as np
-
 from astropy.io import fits
 from astropy.time import Time
-import astropy.units as u
-from astropy.coordinates import EarthLocation
 
 from reduction.stars.algol import kosmos_himmeljahr as algol
 from reduction.spectrum import load_obs_time
 
+from reduction.commandline import poly_iglob, filename_parser, verbose_parser, get_loglevel
 
-def get_obs_dates_by_observer(filenames):
+from collections import defaultdict
+from argparse import ArgumentParser
 
-    dates_by_observer = {}
-    
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def get_obs_dates_by_observer(filenames: Iterable[str]):
+    dates_by_observer = defaultdict(list)
+
     for filename in filenames:
 
         logger.debug("load file %s", filename)
-        
         with fits.open(filename) as hdus:
-            
-            # print("%s\n" % hdus.info())
-        
+
             assert len(hdus) > 0
             hdr = hdus[0].header
-        
+
             obs = hdr.get('observer') or 'unknown'
 
             try:
-                time, exposure = load_obs_time(hdus[0])
+                time, exposure = load_obs_time(hdus[0], filename)
             except ValueError:
                 logger.error("file '%s' contains no recognized observation time", filename)
                 continue
-            
-            times = dates_by_observer.get(obs) or []
-            times.append([time, exposure])
-            
-            dates_by_observer[obs] = times
+
+            assert time
+
+            dates_by_observer[obs].append([time, exposure])
 
     logger.debug("return %s", dates_by_observer)
     return dates_by_observer
 
 
-def show_timeline(star, dates_by_observer, plot):
-    location = EarthLocation(lat=13*u.deg, lon=51*u.deg)
-    
+def show_time_line(star, dates_by_observer: Dict[str, List[Time]], plot: plt):
     for obs, times in sorted(dates_by_observer.items()):
-        plot_dates = [time[0].plot_date for time in times]
-        phases = [star.phase_at(time[0], location) for time in times]
-        xerr = [(time[1] / star.period).to(1).value / 2 for time in times]
-        yerr = np.full(len(times), fill_value=0.05)
+        plot_dates = [time.plot_date for time, _ in times]
+        phases = [star.phase_at(time) for time, _ in times]
+        xerr = [(exposure / star.period).to(1).value / 2 for _, exposure in times]
 
-        plot.errorbar(phases, plot_dates, xerr=xerr, yerr=yerr, ls='none', elinewidth=2, label=obs)
+        plot.errorbar(phases, plot_dates, xerr=xerr, yerr=None, ls='none', elinewidth=2, label=obs)
 
     locator = AutoDateLocator()
     plot.yaxis.set_major_locator(locator)
@@ -77,26 +72,22 @@ def show_timeline(star, dates_by_observer, plot):
 
     plot.legend()
 
-    # show date, not the jd
-    def jd_to_date(jd, pos=None):
-        return Time(jd, format='jd').iso[0:10]
 
-    
+def main():
+    argument_parser = ArgumentParser(description='Show observation times grouped by observer.',
+                                     parents=[filename_parser('spectrum'), verbose_parser])
+    args = argument_parser.parse_args()
+
+    logging.basicConfig(level=get_loglevel(logger, args))
+
+    dates_by_observer = get_obs_dates_by_observer(poly_iglob(args.filenames))
+
+    fig = plt.figure()
+    axes = fig.add_subplot(1, 1, 1)
+    show_time_line(algol, dates_by_observer, axes)
+
+    plt.show()
+
+
 if __name__ == '__main__':
-    
-    import sys
-    
-    filenames = sys.argv[1:]
-    
-    if len(filenames) == 0:
-        print("%s spectrum.fits [second.fits ...]" % sys.argv[0])
-        
-    else:
-        
-        dates_by_observer = get_obs_dates_by_observer(filenames)
-
-        fig = plt.figure()
-        axes = fig.add_subplot(1, 1, 1)
-        show_timeline(algol, dates_by_observer, axes)
-
-        plt.show()
+    main()

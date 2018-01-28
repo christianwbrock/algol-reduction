@@ -1,10 +1,12 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 Given a single spectrum, display all x-ranges within [0.99 y-max .. ymax]
 """
 
 from reduction.spectrum import load
+from reduction.commandline import get_loglevel, verbose_parser
+
 from argparse import ArgumentParser
 
 import numpy as np
@@ -13,9 +15,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-if __name__ == '__main__':
-    parser = ArgumentParser(description='Determine ranges where the spectrum is above y-limit.')
-    parser.add_argument('filename', metavar='spectrum.fit', help='a spectrum file')
+def main():
+    parser = ArgumentParser(description='Determine ranges where the spectrum is above y-limit.',
+                            parents=[verbose_parser])
+    parser.add_argument('filename', metavar='spectrum', help='a spectrum file')
     parser.add_argument('--xrange', nargs=2, type=float, metavar=('min', 'max'),
                         help="restrict extraction to this part of the spectrum")
     parser.add_argument('--ylimit', nargs=1, type=float, metavar='min', default=0.99, help='y threshold')
@@ -24,38 +27,51 @@ if __name__ == '__main__':
                             help='normalize spectrum before applying y-limit')
     norm_group.add_argument('--dont-normalize', dest='normalize', action='store_false',
                             help='do not normalize spectrum before applying y-limit')
-    parser.add_argument('--verbose', '-v', action='count', default=0)
-    parser.add_argument('--quiet', '-q', action='count', default=0)
 
     args = parser.parse_args()
-    logging.basicConfig(level=max(0, logger.getEffectiveLevel() - 10 * args.verbose + 10 * args.quiet))
+    logging.basicConfig(level=get_loglevel(logger, args))
 
     x, y, _ = load(args.filename)
+    assert len(x) and len(x) == len(y)
 
     if args.normalize:
+        logger.info("divide spectrum by %s", np.max(y))
         y /= np.max(y)
+
+    if args.xrange:
+        logger.info("limit wavelength range to %s", args.xrange)
+        inside_range = [args.xrange[0] <= x <= args.xrange[1] for x in x]
+        x = x[inside_range]
+        y = y[inside_range]
+
+        if not x:
+            logger.error("%s does not overlap spectrum %s", args.xrange, args.filename)
+            return
+
+    y = y > args.ylimit
 
     result = []
 
-    prev = True
-    prevStart = 0
-    for i in range(1, len(x)):
+    prev = y[0]
+    prev_idx = 0
+    for curr_idx in range(1, len(x)):
 
-        curr = y[i] > args.ylimit
+        curr = y[curr_idx]
 
         if prev and not curr:
-            result.append([x[prevStart], x[i-1]])
+            result.append([x[prev_idx], x[curr_idx - 1]])
         elif not prev and curr:
-            prevStart = i
+            prev_idx = curr_idx
 
         prev = curr
 
     if prev:
-        result.append([x[prevStart], x[-1]])
+        result.append([x[prev_idx], x[-1]])
 
     print("ranges = %s" % result)
 
     print(" ".join(["-c %g %g" % (a, b) for a, b in result]))
 
 
-
+if __name__ == '__main__':
+    main()
