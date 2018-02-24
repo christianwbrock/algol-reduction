@@ -6,15 +6,13 @@
 Welcome to reduction's documentation!
 =====================================
 
-.. toctree::
+This library contains code used is a project to apply doppler tomography to the Algol star system.
+Components are:
+
+- loading spectra from fits and text files
+- display
+- normalization using synthetic spectra
+
+ .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

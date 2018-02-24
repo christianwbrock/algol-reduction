@@ -6,23 +6,22 @@ from random import random
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises
 
+import pytest
+
 from reduction.linearinterpolation import LinearInterpolation
 
 
-def single(xs, ys):
+@pytest.mark.parametrize('args', [
+    [[1, 2, 3], [7, 8]],  # length error
+    [[1, 2], [7, 8, 9]],  # length error
+    [[1, 2, 4], [7, 8, 9]],  # not equidistant
+])
+def test_arg_error_len(args):
     try:
-        LinearInterpolation(xs, ys)
+        LinearInterpolation(args[0], args[1])
         assert False, 'ValueError expected'
     except ValueError:
         pass
-
-
-def test_arg_error_len():
-    for xs, ys in [[[1, 2, 3], [7, 8]],  # length error
-                   [[1, 2], [7, 8, 9]],  # length error
-                   [[1, 2, 4], [7, 8, 9]],  # not equidistant
-                   ]:
-        yield (single, xs, ys)
 
 
 def test_apply1():

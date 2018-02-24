@@ -59,7 +59,6 @@ def _fix_date_str(date_str, filename=None):
 
     return date_str2
 
-
 def load_obs_time(arg, filename=None):
 
     if isinstance(arg, str):
@@ -91,9 +90,12 @@ def load_obs_time(arg, filename=None):
     elif hdr.get('CIV-DATE'):
         obs_date = Time(hdr.get('CIV-DATE'), format='isot')
 
+    elif hdr.get('JD'):
+        obs_date = Time(hdr.get('JD'), format='jd')
+
     else:
-        logger.error('missing field obs-date, civ-date, etc in %s', filename)
-        raise ValueError('missing field obs-date, civ-date, etc in %s' % filename)
+        logger.error('missing field obs-date, civ-date or jd in %s', filename)
+        raise ValueError('missing field obs-date, civ-date or jd in %s' % filename)
 
     if hdr.get('EXPTIME'):
         exposure = int(hdr.get('EXPTIME')) * u.second
@@ -102,6 +104,40 @@ def load_obs_time(arg, filename=None):
         exposure = None
 
     return obs_date, exposure
+
+
+def load_resolution(arg):
+    """
+    Load 'resol' attribute as float from fits or None if none exists.
+
+    :param arg: single HDU, HDUList or name of a one dimensional fits file i.e. a spectrum
+    :return: 'resol' attribute as float or None
+    """
+    if isinstance(arg, str):
+        with fits.open(arg) as hdu:
+            logger.debug("load_from_fit(%s)", arg)
+            return load_resolution(hdu)
+
+    if isinstance(arg, list):
+        if len(arg) == 0:
+            logger.critical("fits file contains no hdu")
+            raise ValueError("empty fits file")
+
+        if len(arg) > 1:
+            logger.warning("WARN: {} contains more than two hdus", arg)
+
+        return load_resolution(arg[0])
+
+    res = arg.header.get("RESOL")
+
+    if not isinstance(res, (float, int)):
+        try:
+            res = float(res)
+        except Exception:
+            logger.debug("failed to convert string '%s' to float", res)
+            res = None
+
+    return res
 
 
 def load_from_fit(arg):

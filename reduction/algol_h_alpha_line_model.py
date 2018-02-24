@@ -13,6 +13,11 @@ from reduction.constants import H_ALPHA
 
 from reduction import spectrum
 
+from functools import lru_cache
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 class AlgolHAlphaModel(Fittable1DModel):
     """
@@ -27,53 +32,55 @@ class AlgolHAlphaModel(Fittable1DModel):
     scale = Parameter(default=1.0, min=0.0)
     offset = Parameter(default=0.0, fixed=True)
     sigma = Parameter(default=0.4, min=0.1)
-    use_mask = Parameter(default=False, fixed=True)
 
-    _reference_file = os.path.join(os.path.dirname(__file__), 'Modell-H-alpla-Algol.dat')
-    _reference_spectrum = LinearInterpolation(*spectrum.load_from_dat(_reference_file)[:2])
-    _reference_spectrum_cache = {}
+    def __init__(self, *args, **kwargs):
 
-    def __init__(self, **kwargs):
-        args = {'redshift': u.AA, 'sigma': u.AA}
+        arg_units = {'redshift': u.AA, 'sigma': u.AA}
 
         for k, v in kwargs.items():
-            if k in args and v instanceof Quantity:
-                kwargs[k] =
+            if k in arg_units and isinstance(v, Quantity):
+                kwargs[k] = v.to(arg_units[k]).value
 
-    @staticmethod
-    def _get_ref(sigma):
-        self = AlgolHAlphaModel
+        super(AlgolHAlphaModel, self).__init__(*args, **kwargs)
 
-        sigma = round(sigma, 2)
+    #
+    _reference_file = os.path.join(os.path.dirname(__file__), 'Modell-H-alpla-Algol.dat')
+    # _reference_file = os.path.join(os.path.dirname(__file__), 'spectrum_13000.0_4.0_0.3_1.07.fit')
+    _reference_spectrum = LinearInterpolation(*spectrum.load(_reference_file)[:2])
 
-        if sigma not in self._reference_spectrum_cache:
-            res = convolve_with_gauss(self._reference_spectrum, sigma)
-            self._reference_spectrum_cache[sigma] = res
+    @classmethod
+    @lru_cache(maxsize=None)
+    def __get_ref_from_cache(cls, sigma):
+        logger.debug("convolve with sigma=%g", sigma)
+        return convolve_with_gauss(cls._reference_spectrum, sigma)
 
-        return self._reference_spectrum_cache[sigma]
+    @classmethod
+    def _get_ref(cls, sigma):
+        return cls.__get_ref_from_cache(round(sigma, 3))
 
-    @staticmethod
-    def evaluate(x, redshift, scale, offset, sigma, use_mask):
+    @classmethod
+    def evaluate(cls, x, redshift, scale, offset, sigma):
         assert isinstance(redshift, np.ndarray) and 1 == len(redshift)
         assert isinstance(scale, np.ndarray) and 1 == len(scale)
         assert isinstance(offset, np.ndarray) and 1 == len(offset)
         assert isinstance(sigma, np.ndarray) and 1 == len(sigma)
 
-        ref = AlgolHAlphaModel._get_ref(sigma[0])
+        sigma = sigma[0]
+        redshift = redshift[0]
+        scale = scale[0]
+        offset = offset[0]
 
-        x_shifted = x - redshift[0]
-        result = offset[0] + scale[0] * ref(x_shifted)
+        logger.debug("evaluate model: redshift=%g, sigma=%g, ...", redshift, sigma)
 
-        # only use core and far wings does not really work
-        if use_mask[0]:
-            off = np.abs(x_shifted - H_ALPHA.value)
-            # mask = np.logical_and(2.0 < off, off < 10.0)
-            mask = off < 10
-            result[mask] = float('nan')
+        ref = cls._get_ref(sigma)
+
+        x_shifted = x - redshift
+
+        result = offset + scale * ref(x_shifted)
 
         return result
 
-    def __repr__(self):
+    def __str__(self):
         rep = ""
         if not self.redshift.fixed:
             rep += "redshift=$%.1f \AA$ " % self.redshift[0]
@@ -86,9 +93,13 @@ class AlgolHAlphaModel(Fittable1DModel):
         return rep
 
     def get_xlimits(self):
-        return (AlgolHAlphaModel._reference_spectrum.xmin - self.redshift[0],
-                AlgolHAlphaModel._reference_spectrum.xmax - self.redshift[0])
+        return AlgolHAlphaModel.get_xlimit_for_redshift(self.redshift[0])
 
-    @staticmethod
-    def plot(plot):
-        plot.plot(AlgolHAlphaModel._reference_spectrum.xs, AlgolHAlphaModel._reference_spectrum.ys)
+    @classmethod
+    def get_xlimit_for_redshift(cls, redshift):
+        return (cls._reference_spectrum.xmin - redshift,
+                cls._reference_spectrum.xmax - redshift)
+
+    @classmethod
+    def plot(cls, plot):
+        plot.plot(cls._reference_spectrum.xs, cls._reference_spectrum.ys)

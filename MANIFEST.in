@@ -1,0 +1,3 @@
+include reduction/*.dat
+include reduction/*.fit
+include *.rst

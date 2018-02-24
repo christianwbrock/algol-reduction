@@ -42,5 +42,5 @@ def convolve_with_gauss(f, stddev_AA):
     return LinearInterpolation(xs, ys)
 
 
-def deconvolute_with_gauss(xs, ys, sigma):
+def deconvolve_with_gauss(xs, ys, sigma):
     raise NotImplemented

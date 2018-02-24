@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-For a peridic star we want to shedule observations for a given time period.
+For a periodic star we want to schedule observations for a given time period.
 """
-
-import logging
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 import sys
 import os.path
@@ -22,6 +17,9 @@ from astroplan import Observer, MAGIC_TIME
 
 from icalendar import Calendar, Event
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def create_shedule(filename=None):
 
@@ -29,19 +27,19 @@ def create_shedule(filename=None):
     # from reduction.stars.delcep import josi as target
     # target_name = 'Delta Cephei'
 
-    from reduction.stars.algol import filipe_diaz as target
-    target_name = 'Algol_Armacao'
-
-    # from reduction.stars.mizar import mizar as target
-    # target_name = 'Mizar_Marzahn'
-
-    # from reduction.observers import christian, ulrich, filipe
-    from reduction.observers import filipe as location
+    from reduction.stars.algol import unknown as target
+    target_name = 'Algol'
 
     # from reduction.stars.mizar import mizar as target
     # target_name = 'Mizar'
 
-    phases = [0.0]
+    # from reduction.observers import christian, v, filipe
+    from reduction.observers import ulrich as location
+    target_name += '_Marzahn'
+
+    phases = None
+    # phases = [0.0]
+    # phases = [0.0, 0.2]
 
     start_time = Time.now()
     end_time = Time.now() + 366 * u.day

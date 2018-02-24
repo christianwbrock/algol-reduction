@@ -179,7 +179,7 @@ class BinaryOrbit:
         return self._into_0_2pi(2 * np.pi * u.radian * (time - self.epoch) / self.period)
 
     def phase(self, time):
-        return self.true_anomaly(time) / 2 / np.pi
+        return self.true_anomaly(time).value / 2 / np.pi
 
     def true_anomaly(self, time):
         """ return the true anomaly at a given time in the range 0 .. 2pi
