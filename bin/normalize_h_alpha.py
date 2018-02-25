@@ -43,6 +43,9 @@ def main():
     parser.add_argument('--fit-redshift', action='store_true',
                              help='Modify model redshift to best fit data')
 
+    parser.add_argument('--deg', type=int, default=5,
+                        help='Degree of the normalization polynomial (default: %(default)s)')
+
     parser.add_argument('--cmap', default='hot',
                         help='A valid matplotlib colormap name (default: %(default)s)')
 
@@ -100,7 +103,7 @@ def main():
         initial_model.redshift.fixed = not args.fit_redshift
         initial_model.sigma.fixed = not args.fit_sigma
 
-        normalized = normalize(xs, ys, ref_ys=initial_model(xs), deg=5, continuum_ranges=continuum_ranges, method=None)
+        normalized = normalize(xs, ys, ref_ys=initial_model(xs), deg=args.deg, continuum_ranges=continuum_ranges, method=None)
 
         improve_model = args.fit_sigma or args.fit_redshift 
         if improve_model:
@@ -113,7 +116,7 @@ def main():
 
             logger.debug("fit info: %s", fitter.fit_info)
 
-            normalized = normalize(xs, ys, ref_ys=final_model(xs), deg=5, continuum_ranges=continuum_ranges, method=None)
+            normalized = normalize(xs, ys, ref_ys=final_model(xs), deg=args.deg, continuum_ranges=continuum_ranges, method=None)
         else:
             final_model = initial_model
 
@@ -135,7 +138,7 @@ def main():
             if improve_model:
                 plot.plot(xs, final_model(xs), label='fitted %s' % final_model)
             plot.plot(xs, normalized - final_model(xs), label='normalized - fitted')
-            plot.set_title(basename)
+            plot.set_title('%s -- phase = %.2f' % (basename, phase))
 
             plot.legend(loc='upper right')
             plt.show()
