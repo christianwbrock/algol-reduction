@@ -1,31 +1,26 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Plot the radial velocity of Algol AB and C components
+
+TODO: plot heliocentric correction
+"""
+
 import matplotlib.pyplot as plt
-import numpy as np
 
-from reduction.stars.binary_orbit import BinaryOrbit
-
-import astropy.units as u
-from astropy.time import Time
+from reduction.stars.algol import Algol
 
 
 def plot_orbits_by_m2():
 
-    axes = plt.axes()
+    algol = Algol()
 
-    for m2 in np.arange(1.5, 2.01, 0.1):
-        orbit = BinaryOrbit(name1='AB', name2='C',
-                            period=679.58 * u.day,
-                            epoch=Time(2446931.6,  format='jd'),
-                            m1=3.77 * u.solMass,
-                            m2=m2 * u.solMass,
-                            e=0.227,
-                            incl=83.7 * u.degree,
-                            # omega1=310.8 * u.degree,
-                            omega1=80 * u.degree,
-                            Omega=0)
+    plt_AB = plt.subplot(2, 1, 1)
+    algol.AB.plot_orbit(plt_AB)
 
-        orbit.plot_orbit(axes, 0)
+    plt_AB_C = plt.subplot(2, 1, 2)
+    algol.AB_C.plot_orbit(plt_AB_C)
 
-    axes.set_title('masses, I=83')
     plt.show()
 
 

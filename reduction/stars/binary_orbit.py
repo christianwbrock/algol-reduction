@@ -215,6 +215,8 @@ class BinaryOrbit:
         :param plot: target matplotlib plot or subplot
         :param v0: system radial velocity 
         :param points: number of points in x directions
+
+        TODO: display x-axis using matplotlib.dates.AutoDateFormatter
         """
 
         t0 = self.epoch
