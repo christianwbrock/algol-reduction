@@ -39,7 +39,7 @@ def convolve_with_gauss(f, stddev_AA):
 
     assert len(xs) == len(ys)
 
-    return LinearInterpolation(xs, ys)
+    return LinearInterpolation.from_arrays(xs, ys)
 
 
 def deconvolve_with_gauss(xs, ys, sigma):

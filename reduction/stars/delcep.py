@@ -23,8 +23,6 @@ kosmos_himmeljahr = RegularVariableObject(Time('2018-01-01T20:00', format='isot'
 
 def plot_comparison():
 
-    christian = EarthLocation(lat=13*u.degree, lon=51*u.degree)
-
     import matplotlib.pyplot as plt
     from matplotlib.dates import AutoDateFormatter, AutoDateLocator
     axes = plt.axes()
@@ -35,7 +33,7 @@ def plot_comparison():
     plt.axhline(y=0)
 
     for var in [josi, aavso, gcvs, interstellarum_almanach, kosmos_himmeljahr]:
-        var.plot(axes, now, than, location=christian)
+        var.plot(axes, now, than)
 
     locator = AutoDateLocator()
     axes.xaxis.set_major_locator(locator)

@@ -4,7 +4,7 @@
 from random import random
 
 import numpy as np
-from numpy.testing import assert_equal, assert_almost_equal, assert_raises
+from numpy.testing import assert_equal, assert_almost_equal
 
 import pytest
 
@@ -18,14 +18,14 @@ from reduction.linearinterpolation import LinearInterpolation
 ])
 def test_arg_error_len(args):
     try:
-        LinearInterpolation(args[0], args[1])
+        LinearInterpolation.from_arrays(args[0], args[1])
         assert False, 'ValueError expected'
     except ValueError:
         pass
 
 
 def test_apply1():
-    f = LinearInterpolation([0, 1], [0, 1])
+    f = LinearInterpolation.from_arrays([0, 1], [0, 1])
 
     for x in (random() for i in range(200)):
         assert_equal(f(x), x)
@@ -35,7 +35,7 @@ def test_apply2():
     xs = np.linspace(-1.0, 1.0, 21)
     ys = np.sin(xs)
 
-    f = LinearInterpolation(xs, ys)
+    f = LinearInterpolation.from_arrays(xs, ys)
 
     assert_equal(-1.0, f.xmin)
     assert_equal(+1.0, f.xmax)
@@ -51,5 +51,5 @@ def test_apply2():
 
 
 def test_list():
-    f = LinearInterpolation([0, 1], [0, 1])
+    f = LinearInterpolation.from_arrays([0, 1], [0, 1])
     assert_equal([0, 0.5, 1], f([0, 0.5, 1]))

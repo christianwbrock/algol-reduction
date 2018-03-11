@@ -4,7 +4,7 @@
 Display 1d fits data i.g. a spectrum via matplotlib
 """
 
-from reduction.spectrum import load
+from reduction.spectrum import Spectrum
 from reduction.commandline import poly_glob, filename_parser, get_loglevel, verbose_parser
 
 import numpy as np
@@ -22,24 +22,33 @@ logger = logging.getLogger(__name__)
 
 
 def show_file(filename: str, normalize: bool, xrange: List[float], label: str, axes):
-    x, y, unit = load(filename)
 
-    if xrange:
-        filter = [xrange[0] <= x <= xrange[1] for x in x]
+    spectra = Spectrum.load(filename, slice(None))
 
-        if np.any(filter):
-            x = x[filter]
-            y = y[filter]
-        else:
-            logger.error("ignore file %s where parameter xrange=%s is outsize data range=%s",
-                         filename, xrange, [x[0], x[-1]])
-            return
+    if not isinstance(spectra, list):
+        spectra = [spectra]
 
-    if normalize:
-        y /= max(y)
+    for spectrum in spectra:
 
-    axes.plot(x, y, label=label)
-    axes.set_xlabel(unit or 'Wavelength')
+        x = np.copy(spectrum.xs)
+        y = np.copy(spectrum.ys)
+
+        if xrange:
+            mask = [xrange[0] <= x <= xrange[1] for x in x]
+
+            if np.any(mask):
+                x = x[mask]
+                y = y[mask]
+            else:
+                logger.error("ignore file %s where parameter xrange=%s is outsize data range=%s",
+                             filename, xrange, [x[0], x[-1]])
+                return
+
+        if normalize:
+            y /= max(y)
+
+        axes.plot(x, y, label=label)
+        axes.set_xlabel('Wavelength')
 
 
 def plot_many_files(args):
@@ -65,7 +74,11 @@ def plot_many_files(args):
         label = os.path.basename(filename)
         show_file(filename, args.normalize, args.xrange, label, ax)
 
-    plt.legend()
+        if not args.merge:
+            ax.legend()
+
+    if args.merge:
+        plt.legend()
 
 
 def main():

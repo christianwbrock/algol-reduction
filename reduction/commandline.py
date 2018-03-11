@@ -50,13 +50,14 @@ def filename_parser(metavar: str):
     return parser
 
 
-def poly_iglob(filenames_or_patterns: Iterable, *, recursive=True):
+def poly_iglob(filenames_or_patterns: Iterable, *, recursive=True, ignore_case=True):
     """
     Read sequence of file names with or without wildcard characters.
     Any wildcards are replaced by matching file names using glob.iglob().
 
     :param filenames_or_patterns: iterable of strings with or without wildcard characters.
     :param recursive: is passed to glob.iglob
+    :param ignore_case: allows case insensitive matching
     :return: an iterator
     """
 
@@ -65,8 +66,13 @@ def poly_iglob(filenames_or_patterns: Iterable, *, recursive=True):
 
     result = []
 
+    def either(c):
+        return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
+
     for item in filenames_or_patterns:
         try:
+            if ignore_case:
+                item = ''.join(map(either, item))
             result = chain(result, glob.iglob(item, recursive=recursive))
         except TypeError:
             result = chain(result, glob.iglob(item))
@@ -74,8 +80,8 @@ def poly_iglob(filenames_or_patterns: Iterable, *, recursive=True):
     return result
 
 
-def poly_glob(filenames_or_patterns, *, recursive=True):
-    return list(poly_iglob(filenames_or_patterns, recursive=recursive))
+def poly_glob(filenames_or_patterns, *, recursive=True, ignore_case=True):
+    return list(poly_iglob(filenames_or_patterns, recursive=recursive, ignore_case=ignore_case))
 
 
 # --------- arguments passed to astropy Time -----

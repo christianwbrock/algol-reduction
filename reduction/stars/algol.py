@@ -1,8 +1,3 @@
-import logging
-logger = logging.getLogger(__name__)
-
-import numpy as np
-
 import astropy.units as u
 from astropy.coordinates import SkyCoord, EarthLocation
 from astropy.time import Time
@@ -10,6 +5,8 @@ from astropy.time import Time
 from reduction.stars.binary_orbit import BinaryOrbit
 from reduction.stars.variable_stars import RegularVariableObject
 
+import logging
+logger = logging.getLogger(__name__)
 
 algol_coordinate = SkyCoord(47.04221855, 40.95564667, unit=u.deg, frame='icrs')
 
@@ -103,11 +100,11 @@ def plot_algol():
 
     algol = Algol()
 
-    fig = plt.figure(figsize=(6, 9))
+    fig = plt.figure(figsize=(6.4, 4.8*2))
     fig.subplots_adjust(hspace=0.6)
 
-    # algol.AB.plot_orbit(fig.add_subplot(311), algol.rv)
-    algol.AB_C.plot_orbit(fig.add_subplot(111), 0)
+    algol.AB.plot_orbit(fig.add_subplot(211), algol.rv)
+    algol.AB_C.plot_orbit(fig.add_subplot(212), 0)
 
 #        bernd.plot_heliocentric_correction(fig.add_subplot(413), Time('2017-06-01'), 30*u.day, algol.coordinate)
     # bernd.plot_heliocentric_correction(fig.add_subplot(313), Time('2017-01-01'), 365*u.day, algol.coordinate)
@@ -142,5 +139,5 @@ def plot_comparison():
 
 
 if __name__ == '__main__':
-    # plot_algol()
+    plot_algol()
     plot_comparison()

@@ -1,6 +1,8 @@
 
 from math import isnan
 
+import numpy as np
+
 
 def nan_leastsquare(measured_vals, updated_model, weights, x, y=None):
     """
@@ -33,24 +35,6 @@ def nan_leastsquare(measured_vals, updated_model, weights, x, y=None):
         model_vals = updated_model(x, y)
 
     if weights is None:
-        return _sum((model_vals - measured_vals) ** 2)
+        return np.nanmean((model_vals - measured_vals) ** 2)
     else:
-        return _sum((weights * (model_vals - measured_vals)) ** 2)
-
-
-def _sum(array):
-
-    # return np.sum(array)  # the original
-
-    sum2 = 0.0
-    count = 0
-
-    for a in array:
-        if not isnan(a):
-            sum2 += a
-            count += 1
-
-    if count > 0:
-        return sum2 / count
-
-    raise ValueError('all of %d values are nan', array.size)
+        return np.nanmean((weights * (model_vals - measured_vals)) ** 2)

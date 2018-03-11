@@ -11,7 +11,7 @@ from reduction.linearinterpolation import LinearInterpolation
 from reduction.instrument import convolve_with_gauss
 from reduction.constants import H_ALPHA
 
-from reduction import spectrum
+from reduction.spectrum import Spectrum
 
 from functools import lru_cache
 
@@ -44,9 +44,9 @@ class AlgolHAlphaModel(Fittable1DModel):
         super(AlgolHAlphaModel, self).__init__(*args, **kwargs)
 
     #
-    _reference_file = os.path.join(os.path.dirname(__file__), 'Modell-H-alpla-Algol.dat')
-    # _reference_file = os.path.join(os.path.dirname(__file__), 'spectrum_13000.0_4.0_0.3_1.07.fit')
-    _reference_spectrum = LinearInterpolation(*spectrum.load(_reference_file)[:2])
+    # _reference_file = os.path.join(os.path.dirname(__file__), 'Modell-H-alpla-Algol.dat')
+    _reference_file = os.path.join(os.path.dirname(__file__), '../data/synth/algol-kolbas2005.fit')
+    _reference_spectrum = LinearInterpolation.from_spectrum(Spectrum.load(_reference_file))
 
     @classmethod
     @lru_cache(maxsize=None)

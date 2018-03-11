@@ -1,10 +1,14 @@
+""" Normalize spectra
+"""
+
+from reduction.spectrum import Spectrum
+from reduction.linearinterpolation import LinearInterpolation
+
 import numpy as np
 from numpy.polynomial.hermite import hermfit, hermval
+from matplotlib import pyplot as plt
 
 from argparse import ArgumentParser
-
-import warnings
-warnings.simplefilter('ignore', np.RankWarning)
 
 import logging
 logger = logging.getLogger(__name__)
@@ -13,9 +17,10 @@ arg_parser = ArgumentParser(add_help=False)
 """
 Use this parser as parent parser in client command line scripts.
 """
+arg_parser.add_argument('-r', '--ref', help='normalized reference spectrum')
 arg_parser.add_argument('-d', '--degree', type=int, default=3, help='degree of the polynomial to be fitted')
 arg_parser.add_argument('-c', '--continuum-range', dest='ranges', nargs=2, type=float, metavar=('xmin', 'xmax'),
-                    action='append', required=True, help='one or more continuum ranges used for the polynomial fit')
+                        action='append', required=False, help='one or more continuum ranges used for the polynomial fit')
 arg_parser.add_argument('--method', choices=['hermit', 'polynomial'], default='polynomial')
 
 
@@ -82,23 +87,52 @@ def _ranges_to_mask(xs, ranges):
     return mask
 
 
-def normalize_args(xs, ys, args):
-    return normalize(xs, ys, None, args.degree, args.ranges, args.method)
+def normalize_args(spectrum, args, requested_plot=None, cut=15):
+    return normalize_spectrum(spectrum, args.ref, args.degree, args.ranges, args.method, requested_plot, cut)
 
 
-def normalize(xs, ys, ref_ys, deg, continuum_ranges, method):
+def normalize_spectrum(spectrum, ref_spectrum, degree, ranges, method, requested_plot=None, cut=15):
+
+    if isinstance(spectrum, str):
+        spectrum = Spectrum.load(spectrum)
+
+    if isinstance(ref_spectrum, str):
+        ref_spectrum = Spectrum.load(ref_spectrum)
+
+    if isinstance(ref_spectrum, Spectrum):
+        ref_spectrum = LinearInterpolation.from_spectrum(ref_spectrum)
+
+    xs = spectrum.xs[cut:-cut]
+    ys = spectrum.ys[cut:-cut]
+
+    ys /= np.nanmax(ys)
+
+    if not ranges:
+        ranges = [[xs[0], xs[-1]]]
+        if ref_spectrum:
+            ranges[0][0] = np.max((ranges[0][0], ref_spectrum.xmin))
+            ranges[0][1] = np.min((ranges[0][1], ref_spectrum.xmax))
+
+    ref_ys = ref_spectrum(xs) if ref_spectrum else None
+
+    return normalize(xs, ys, ref_ys, degree, ranges, method, requested_plot)
+
+
+def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None):
     """
-    :param ref_ys:
     :param xs: array_like, shape(M,)
-        x-coordinates of the M sample points ``(xs[i], ys[i])``.
+        x-coordinates of the M sample points.
     :param ys: array_like, shape(M,)
-        y-coordinates of the M sample points ``(xs[i], ys[i])``.
+        values of the M sample points.
+    :param ref_ys: array_like, shape(M,) or None
+        reference values of the M sample points.
     :param deg: int
         Degree of the fitting polynomial 
     :param continuum_ranges: array_like, shape(N,2)
         At least one x-min, xmax range of points in xs to be used
         for fitting the polynomial.
     :param method: either 'hermit' or 'polynomial' (default: 'polynomial')
+    :param requested_plot: If present, a plot of the normalization is generated.
 
     :return: ys divided by the pest fitting polynomial
     """
@@ -126,32 +160,37 @@ def normalize(xs, ys, ref_ys, deg, continuum_ranges, method):
 
         logger.debug("continuum SNR is %.0f", 1.0 / stddev)
 
-        if logger.getEffectiveLevel() < logging.DEBUG:
+    plot = requested_plot
+    if not plot and logger.getEffectiveLevel() < logging.DEBUG:
+        fig = plt.figure()
+        plot = fig.add_subplot(111)
 
-            from matplotlib import pyplot as plt
+    if plot:
+        xlim = __get_xlim(xs, continuum_ranges, ys, ref_ys)
+        plot.set_xlim(xlim)
+        plot.set_ylim(__get_ylim(1.3, xlim, xs, ys, ref_ys))
 
-            xlim = __get_xlim(xs, continuum_ranges, ys, ref_ys)
-            plt.xlim(xlim)
-            plt.ylim(__get_ylim(1.3, xlim, xs, ys, ref_ys))
+        for r in continuum_ranges:
+            plot.axvspan(r[0], r[1], alpha=0.25)
 
-            for r in continuum_ranges:
-                plt.axvspan(r[0], r[1], alpha=0.25)
+        plot.plot(xs, ys, label='meas')
 
-            plt.plot(xs, ys, label='meas')
-            if ref_ys is not None:
-                plt.plot(xs, ref_ys, label='ref')
-                plt.plot(xs, ys / ref_ys, label='meas / ref')
+        if ref_ys is not None:
+            plot.plot(xs, ref_ys, label='ref')
+            plot.plot(xs, ys / ref_ys, label='meas / ref')
 
-            plt.plot(xs, poly(xs), label='polynomial')
-            plt.plot(xs, array, label='normalized')
-            plt.legend()
+        plot.plot(xs, poly(xs), label='polynomial')
+        plot.plot(xs, array, label='normalized')
+
+        plot.legend()
+
+        if not requested_plot:
             plt.show()
 
     return array
 
 
 def __get_xlim(xs, ranges, y1, y2):
-
     min_x = max(xs[0], ranges[0][0])
     max_x = min(xs[-1], ranges[-1][-1])
 
@@ -173,7 +212,6 @@ def __get_xlim(xs, ranges, y1, y2):
 
 
 def __get_ylim(scale, xlim, xs, y1, y2):
-
     mask = _ranges_to_mask(xs, [xlim])
 
     min_y = np.min(y1[mask])
@@ -184,31 +222,3 @@ def __get_ylim(scale, xlim, xs, y1, y2):
         max_y = max(max_y, np.max(y2[mask]))
 
     return min_y / scale, max_y * scale
-
-
-def plot_normalized_args(plot, filename, args):
-    plot_normalized(plot, filename, args.ranges, [args.degree], args.method)
-
-
-def plot_normalized(plot, filename, ranges, degrees, method):
-
-    from reduction.spectrum import load
-
-    xs, ys, unit = load(filename)
-    xs = xs[15:-15]
-    ys = ys[15:-15]
-
-    y1 = 0.6 * ys / ys.max()
-    plot.plot(xs, y1, label="orig")
-    plot.set_xlabel(unit)
-
-    for r in ranges:
-        plot.axvspan(r[0], r[1], alpha=0.25)
-
-    for deg in degrees:
-        poly = fit_polynomial(xs, y1, deg, ranges, method=method)
-        plot.plot(xs, [poly(x) for x in xs], label="poly_%d" % deg)
-
-        yn = normalize(xs, ys, None, deg, ranges, method=method)
-        plot.plot(xs, yn, label="norm_%d" % deg)
-

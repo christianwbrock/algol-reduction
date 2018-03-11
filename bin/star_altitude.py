@@ -25,7 +25,7 @@ t1 = Time('2017-12-07 08:00')
 
 points = 200
 
-ts = Time([t0 + (t1- t0) * i / points for i in range(points + 1)])
+ts = Time([t0 + (t1 - t0) * i / points for i in range(points + 1)])
 aa = observer.altaz(ts, star)
 
 axes = plt.axes()

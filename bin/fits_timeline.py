@@ -11,11 +11,10 @@ from typing import *
 import matplotlib.pyplot as plt
 from matplotlib.dates import AutoDateFormatter, AutoDateLocator
 
-from astropy.io import fits
 from astropy.time import Time
 
 from reduction.stars.algol import kosmos_himmeljahr as algol
-from reduction.spectrum import load_obs_time
+from reduction.spectrum import Spectrum
 
 from reduction.commandline import poly_iglob, filename_parser, verbose_parser, get_loglevel
 
@@ -23,7 +22,6 @@ from collections import defaultdict
 from argparse import ArgumentParser
 
 import logging
-
 logger = logging.getLogger(__name__)
 
 
@@ -33,22 +31,18 @@ def get_obs_dates_by_observer(filenames: Iterable[str]):
     for filename in filenames:
 
         logger.debug("load file %s", filename)
-        with fits.open(filename) as hdus:
 
-            assert len(hdus) > 0
-            hdr = hdus[0].header
+        spectra = Spectrum.load_from_fit(filename, slice(None))
 
-            obs = hdr.get('observer') or 'unknown'
+        for spectrum in spectra:
 
-            try:
-                time, exposure = load_obs_time(hdus[0], filename)
-            except ValueError:
+            if spectrum.obs_date is None:
                 logger.error("file '%s' contains no recognized observation time", filename)
                 continue
 
-            assert time
+            obs = spectrum.observer or 'Unknown'
 
-            dates_by_observer[obs].append([time, exposure])
+            dates_by_observer[obs].append([spectrum.obs_date, spectrum.exposure])
 
     logger.debug("return %s", dates_by_observer)
     return dates_by_observer
@@ -71,6 +65,7 @@ def show_time_line(star, dates_by_observer: Dict[str, List[Time]], plot: plt):
     plt.grid()
 
     plot.legend()
+    plot.set_xlabel('Phase')
 
 
 def main():
@@ -83,7 +78,9 @@ def main():
     dates_by_observer = get_obs_dates_by_observer(poly_iglob(args.filenames))
 
     fig = plt.figure()
+
     axes = fig.add_subplot(1, 1, 1)
+    axes.set_title('Observations by phase and date')
     show_time_line(algol, dates_by_observer, axes)
 
     plt.show()

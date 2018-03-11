@@ -6,9 +6,6 @@ and store them in fits files having observer and date-obs header fields
 we want to know what phases we have covered.
 """
 
-import logging
-logger = logging.getLogger(__name__)
-
 import numpy as np
 
 from astropy.time import Time
@@ -18,6 +15,10 @@ from astropy.coordinates import EarthLocation
 import astropy.units as u
 
 import math
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class VariableObject(object):
@@ -53,7 +54,10 @@ class VariableObject(object):
         Due to the rotation around the sun, light from the target reaches earth sooner or later in a given six month
         period. Subclasses may be modify/disable this light_travel_time correction by overriding this method.
         """
-        observer_location = observer_location or observation_time.location or EarthLocation.from_geocentric(0, 0, 0, u.meter)
+        observer_location = (observer_location or
+                             observation_time.location or
+                             EarthLocation.from_geocentric(0, 0, 0, u.meter))
+
         return observation_time.light_travel_time(sky_coordinate, kind='barycentric', location=observer_location)
 
     def phase_at(self, time, location=None):
@@ -153,4 +157,6 @@ class RegularVariableObject(VariableObject):
         return time - corr
 
     def __repr__(self):
-        return "%s says that epoch: %s, period: %s, pos: %s" % (self.authority, self.epoch, self.period, self.coordinate)
+        return "%s says that epoch: %s, period: %s, pos: %s" % (
+            self.authority, self.epoch, self.period, self.coordinate)
+

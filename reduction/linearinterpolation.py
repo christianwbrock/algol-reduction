@@ -11,24 +11,33 @@ class LinearInterpolation:
         This class implements a linear interpolation ...
     """
 
-    def __init__(self, xs, ys):
+    def __init__(self, xs, ys, dx):
+        self.xs = xs
+        self.ys = ys
+        self.dx = dx
+
+    @classmethod
+    def from_spectrum(cls, spectrum):
+
+        return cls(spectrum.xs, spectrum.ys, spectrum.dx)
+
+    @classmethod
+    def from_arrays(cls, xs, ys):
         """ raises ValueError when xs are not equidistant.
         """
 
         if not (len(xs) == len(ys)):
             raise ValueError("argument length mismatch")
 
-        # xs are unused by self
-        self.xs = xs
-        self.ys = ys
+        dx = (xs[-1] - xs[0]) / (len(xs) - 1)
 
-        self.dx = (self.xmax - self.xmin) / (len(xs) - 1)
+        for i, actual in enumerate(xs):
+            expected = xs[0] + i * dx
 
-        for i, actual in enumerate(self.xs):
-            expected = self.xmin + i * self.dx
-
-            if abs(expected - actual) * 1000 > self.dx:
+            if abs(expected - actual) * 1000 > dx:
                 raise ValueError("xs are not equidistant")
+
+        return cls(xs, ys, dx)
 
     @property
     def xmin(self):

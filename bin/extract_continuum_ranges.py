@@ -4,7 +4,7 @@
 Given a single spectrum, display all x-ranges within [0.99 y-max .. ymax]
 """
 
-from reduction.spectrum import load
+from reduction.spectrum import Spectrum
 from reduction.commandline import get_loglevel, verbose_parser
 
 from argparse import ArgumentParser
@@ -19,6 +19,7 @@ def main():
     parser = ArgumentParser(description='Determine ranges where the spectrum is above y-limit.',
                             parents=[verbose_parser])
     parser.add_argument('filename', metavar='spectrum', help='a spectrum file')
+    parser.add_argument('--index', type=int, default=0, help='hdu in the spectrum (default=0)')
     parser.add_argument('--xrange', nargs=2, type=float, metavar=('min', 'max'),
                         help="restrict extraction to this part of the spectrum")
     parser.add_argument('--ylimit', nargs=1, type=float, metavar='min', default=0.99, help='y threshold')
@@ -31,8 +32,10 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=get_loglevel(logger, args))
 
-    x, y, _ = load(args.filename)
-    assert len(x) and len(x) == len(y)
+    spectrum = Spectrum.load(args.filename, slice(args.index, args.index+1))
+
+    y = spectrum.ys
+    x = spectrum.xs
 
     if args.normalize:
         logger.info("divide spectrum by %s", np.max(y))

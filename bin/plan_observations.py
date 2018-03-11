@@ -328,7 +328,12 @@ def display_ical(filename, observer, observations, target_name):
         file.write(cal.to_ical())
 
 
-if __name__ == '__main__':
+def main():
     logging.basicConfig(level=logging.INFO)
     filename = sys.argv[1] if len(sys.argv) > 1 else None
     create_shedule(filename)
+
+
+if __name__ == '__main__':
+    main()
+
