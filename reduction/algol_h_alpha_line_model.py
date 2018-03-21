@@ -45,7 +45,9 @@ class AlgolHAlphaModel(Fittable1DModel):
 
     #
     # _reference_file = os.path.join(os.path.dirname(__file__), 'Modell-H-alpla-Algol.dat')
-    _reference_file = os.path.join(os.path.dirname(__file__), '../data/synth/algol-kolbas2005.fit')
+    # _reference_file = os.path.join(os.path.dirname(__file__), '../data/synth/algol-kolbas2005.fit')
+    _reference_file = os.path.join(os.path.dirname(__file__),
+                                   '../data/synth/CONV_R50._L6563_W200._A_p12500g4.0z-0.5t2.0_a0.00c0.00n0.00o0.00r0.00s0.00_VIS.spec')
     _reference_spectrum = LinearInterpolation.from_spectrum(Spectrum.load(_reference_file))
 
     @classmethod
