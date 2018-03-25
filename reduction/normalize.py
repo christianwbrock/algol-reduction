@@ -1,8 +1,9 @@
 """ Normalize spectra
 """
+from _weakref import ref
 
 from reduction.spectrum import Spectrum
-from reduction.linearinterpolation import LinearInterpolation
+from reduction.instrument import convolve_with_box
 
 import numpy as np
 from numpy.polynomial.hermite import hermfit, hermval
@@ -11,6 +12,7 @@ from matplotlib import pyplot as plt
 from argparse import ArgumentParser
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 arg_parser = ArgumentParser(add_help=False)
@@ -18,10 +20,15 @@ arg_parser = ArgumentParser(add_help=False)
 Use this parser as parent parser in client command line scripts.
 """
 arg_parser.add_argument('-r', '--ref', help='normalized reference spectrum')
-arg_parser.add_argument('-d', '--degree', type=int, default=3, help='degree of the polynomial to be fitted')
+arg_parser.add_argument('-d', '--degree', type=int, default=3,
+                        help='degree of the polynomial to be fitted (default: %(default)s)')
 arg_parser.add_argument('-c', '--continuum-range', dest='ranges', nargs=2, type=float, metavar=('xmin', 'xmax'),
-                        action='append', required=False, help='one or more continuum ranges used for the polynomial fit')
-arg_parser.add_argument('--method', choices=['hermit', 'polynomial'], default='polynomial')
+                        action='append', required=False,
+                        help='one or more continuum ranges used for the polynomial fit')
+arg_parser.add_argument('--method', choices=['hermit', 'polynomial'], default='polynomial',
+                        help='(default:  %(default)s)')
+arg_parser.add_argument('--center-minimum', nargs=3, type=float, metavar=('xmin', 'xmax', 'box-size'),
+                        help='calculate redshift from plot minimum')
 
 
 def fit_polynomial_args(xs, ys, args):
@@ -88,24 +95,31 @@ def _ranges_to_mask(xs, ranges):
 
 
 def normalize_args(spectrum, args, requested_plot=None, cut=15):
-    return normalize_spectrum(spectrum, args.ref, args.degree, args.ranges, args.method, requested_plot, cut)
+    return normalize_spectrum(spectrum, args.ref, args.degree, args.ranges, args.method, args.center_minimum,
+                              requested_plot, cut)
 
 
-def normalize_spectrum(spectrum, ref_spectrum, degree, ranges, method, requested_plot=None, cut=15):
-
+def normalize_spectrum(spectrum, ref_spectrum, degree, ranges, method, center_minimum, requested_plot=None, cut=15):
     if isinstance(spectrum, str):
         spectrum = Spectrum.load(spectrum)
 
     if isinstance(ref_spectrum, str):
         ref_spectrum = Spectrum.load(ref_spectrum)
 
-    if isinstance(ref_spectrum, Spectrum):
-        ref_spectrum = LinearInterpolation.from_spectrum(ref_spectrum)
-
     xs = spectrum.xs[cut:-cut]
     ys = spectrum.ys[cut:-cut]
 
     ys /= np.nanmax(ys)
+
+    if center_minimum and ref_spectrum:
+        min_spectrum = _find_minimum(Spectrum.from_arrays(xs, ys), center_minimum)
+        min_ref = _find_minimum(ref_spectrum, center_minimum)
+
+        redshift = min_ref - min_spectrum
+    else:
+        redshift = 0.0
+
+    xs = xs + redshift
 
     if not ranges:
         ranges = [[xs[0], xs[-1]]]
@@ -116,6 +130,13 @@ def normalize_spectrum(spectrum, ref_spectrum, degree, ranges, method, requested
     ref_ys = ref_spectrum(xs) if ref_spectrum else None
 
     return normalize(xs, ys, ref_ys, degree, ranges, method, requested_plot)
+
+
+def _find_minimum(spectrum, range):
+    boxed = convolve_with_box(spectrum, range[2])
+    mask = [range[0] <= x <= range[1] for x in boxed.xs]
+    index = np.nanargmin(boxed.ys[mask])
+    return boxed.xs[mask][index]
 
 
 def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None):
@@ -134,7 +155,7 @@ def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None
     :param method: either 'hermit' or 'polynomial' (default: 'polynomial')
     :param requested_plot: If present, a plot of the normalization is generated.
 
-    :return: ys divided by the pest fitting polynomial
+    :return: ys divided by the pest fitting polynomial and the std-dev
     """
 
     assert len(xs) == len(ys)
@@ -151,14 +172,15 @@ def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None
 
     array = np.array([ys[i] / poly(xs[i]) for i in range(len(xs))])
 
-    if logger.getEffectiveLevel() <= logging.DEBUG:
-        mask = _ranges_to_mask(xs, continuum_ranges)
-        if ref_ys is not None:
-            stddev = np.nanstd((array / ref_ys)[mask])
-        else:
-            stddev = np.nanstd(array[mask])
+    mask = _ranges_to_mask(xs, continuum_ranges)
+    if ref_ys is not None:
+        stddev = np.nanstd((array / ref_ys)[mask])
+    else:
+        stddev = np.nanstd(array[mask])
 
-        logger.debug("continuum SNR is %.0f", 1.0 / stddev)
+    snr = 1.0 / stddev
+
+    logger.debug("continuum SNR is %.0f", snr)
 
     plot = requested_plot
     if not plot and logger.getEffectiveLevel() < logging.DEBUG:
@@ -187,7 +209,7 @@ def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None
         if not requested_plot:
             plt.show()
 
-    return array
+    return array, snr
 
 
 def __get_xlim(xs, ranges, y1, y2):

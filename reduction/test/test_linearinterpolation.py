@@ -8,7 +8,7 @@ from numpy.testing import assert_equal, assert_almost_equal
 
 import pytest
 
-from reduction.linearinterpolation import LinearInterpolation
+from reduction.spectrum import Spectrum
 
 
 @pytest.mark.parametrize('args', [
@@ -18,14 +18,14 @@ from reduction.linearinterpolation import LinearInterpolation
 ])
 def test_arg_error_len(args):
     try:
-        LinearInterpolation.from_arrays(args[0], args[1])
+        Spectrum.from_arrays(args[0], args[1])
         assert False, 'ValueError expected'
     except ValueError:
         pass
 
 
 def test_apply1():
-    f = LinearInterpolation.from_arrays([0, 1], [0, 1])
+    f = Spectrum.from_arrays([0, 1], [0, 1])
 
     for x in (random() for i in range(200)):
         assert_equal(f(x), x)
@@ -35,7 +35,7 @@ def test_apply2():
     xs = np.linspace(-1.0, 1.0, 21)
     ys = np.sin(xs)
 
-    f = LinearInterpolation.from_arrays(xs, ys)
+    f = Spectrum.from_arrays(xs, ys)
 
     assert_equal(-1.0, f.xmin)
     assert_equal(+1.0, f.xmax)
@@ -51,5 +51,5 @@ def test_apply2():
 
 
 def test_list():
-    f = LinearInterpolation.from_arrays([0, 1], [0, 1])
+    f = Spectrum.from_arrays([0, 1], [0, 1])
     assert_equal([0, 0.5, 1], f([0, 0.5, 1]))

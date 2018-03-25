@@ -119,7 +119,7 @@ def main():
         initial_model.redshift.fixed = not args.fit_redshift
         initial_model.sigma.fixed = not args.fit_sigma
 
-        normalized = normalize(xs, ys, ref_ys=initial_model(xs), deg=args.deg, continuum_ranges=continuum_ranges,
+        normalized, snr = normalize(xs, ys, ref_ys=initial_model(xs), deg=args.deg, continuum_ranges=continuum_ranges,
                                method=None)
 
         improve_model = args.fit_sigma or args.fit_redshift
@@ -133,7 +133,7 @@ def main():
 
             logger.debug("fit info: %s", fitter.fit_info)
 
-            normalized = normalize(xs, ys, ref_ys=final_model(xs), deg=args.deg, continuum_ranges=continuum_ranges,
+            normalized, snr = normalize(xs, ys, ref_ys=final_model(xs), deg=args.deg, continuum_ranges=continuum_ranges,
                                    method=None)
         else:
             final_model = initial_model
@@ -176,6 +176,9 @@ def main():
         vmin = np.min([np.nanmin(diff.diff) for diff in diff_plots])
         vmax = np.max([np.nanmax(diff.diff) for diff in diff_plots])
 
+        vmin = max(-1.0, vmin)
+        vmax = min(+1.0, vmax)
+
         for diff in diff_plots:
 
             assert len(diff.wavelength) == len(diff.diff)
@@ -188,8 +191,8 @@ def main():
         fig.colorbar(sc)
         plt.show()
 
-
 def _find_minimum(xs, ys, dx, range_AA, box_size_AA):
+
     xs = np.asarray(xs)
     ys = np.asarray(ys)
 

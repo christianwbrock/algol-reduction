@@ -23,13 +23,24 @@ class Spectrum:
         self.x0 = x0
         self.dx = dx
         self.nx = nx
-        self.ys = ys
+        self.ys = np.asarray(ys)
         self.observer = observer
         self.obs_date = obs_date
         self.exposure = exposure
         self.resolution = resolution
         self.filename = filename
         self.hdu_nbr = hdu_nbr
+
+        self.xs = np.asarray([self.x0 + i * self.dx for i in range(self.nx)])
+
+        self.xmin = self.x0
+        self.xmax = self.x0 + self.dx * (self.nx - 1)
+
+        self.short_name = ""
+        if self.filename:
+            self.short_name += os.path.basename(self.filename)
+        if self.hdu_nbr:
+            self.short_name += "(" + self.hdu_nbr + ")"
 
         # converts x0 and dx to Angstrom
         if unit:
@@ -40,21 +51,17 @@ class Spectrum:
                 self.x0 = u.Quantity(self.x0, unit).to(u.AA).value
                 self.dx = u.Quantity(self.dx, unit).to(u.AA).value
 
-    @property
-    def short_name(self):
-        res = ""
-        if self.filename:
-            res += os.path.basename(self.filename)
-        if self.hdu_nbr:
-            res += "(" + self.hdu_nbr + ")"
-        return res
+    def __call__(self, x):
+        return np.interp(x, self.xs, self.ys, left=np.NaN, right=np.NaN)
 
-    @property
-    def xs(self):
-        return [self.x0 + i * self.dx for i in range(self.nx)]
+    def __eq__(self, other):
+        return self.__key() == other.__key()
 
     def __hash__(self):
-        return hash((self.x0, self.dx, self.nx, self.ys, self.observer, self.obs_date, self.exposure, self.resolution))
+        return hash(self.__key())
+
+    def __key(self):
+        return tuple(self.xs), tuple(self.ys)
 
     @classmethod
     def load(cls, filename, indices=slice(1)):
@@ -70,8 +77,8 @@ class Spectrum:
             logger.debug("%s", e)
             return cls.load_from_dat(filename)
 
-    @staticmethod
-    def load_from_dat(filename):
+    @classmethod
+    def load_from_dat(cls, filename):
         """load spectrum from dat file using numpy.load_txt()
 
         Any leading or trailing zero magnitudes are removed.
@@ -105,14 +112,23 @@ class Spectrum:
         xs = data[begin:end, 0]
         ys = data[begin:end, 1]
 
+        return cls.from_arrays(xs, ys, filename)
+
+    @staticmethod
+    def from_arrays(xs, ys, filename=None):
+
+        if not len(xs) == len(ys):
+            raise ValueError("xs and ys differ in length")
+
         x0 = xs[0]
         nx = len(xs)
         dx = (xs[-1] - xs[0]) / (nx - 1)
 
         # test equidistance
-        assert 0.001 * dx > np.max(np.diff(xs)) - np.min(np.diff(xs))
+        if not 0.001 * dx > np.max(np.diff(xs)) - np.min(np.diff(xs)):
+            raise ValueError("xs are not equidistant")
 
-        return Spectrum(x0, dx, nx, ys)
+        return Spectrum(x0, dx, nx, ys, filename=filename)
 
     @classmethod
     def load_from_fit(cls, filename, indices=slice(1)):

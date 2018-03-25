@@ -38,13 +38,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 Diff = namedtuple('Diff', 'wavelength diff phase')
 
 
 def main():
+
+    plot_params['figure.dpi'] = 150
+
+    max_diff = 0.25
+    padding = 10.0
+    continuum_ranges = ((6520, H_ALPHA.value - padding), (H_ALPHA.value + padding, 6610))
+
     parser = ArgumentParser(parents=[filename_parser('spectrum'), verbose_parser],
                             description='Generate LaTeX report displaying spectrums normalized around the Halpha line.')
+
     parser.add_argument('-o', '--output', type=str, default='output')
     parser.add_argument('-f', '--force', action='store_true')
 
@@ -61,9 +68,6 @@ def main():
 
     args = parser.parse_args()
 
-    plot_params['figure.dpi'] = 300
-    fig_size = plot_params['figure.figsize']
-
     logging.basicConfig(level=get_loglevel(logger, args))
 
     os.makedirs(args.output, exist_ok=args.force)
@@ -75,9 +79,6 @@ def main():
 
     observer_location = EarthLocation.from_geodetic(lon=15.0, lat=50.0)
     algol = Algol()
-
-    padding = 20.0
-    continuum_ranges = ((6520, H_ALPHA.value - padding), (H_ALPHA.value + padding, 6610))
 
     text_file = open(os.path.join(args.output, "report.tex"), "w")
 
@@ -170,7 +171,7 @@ def main():
         initial_model.redshift.fixed = not args.fit_redshift
         initial_model.sigma.fixed = not args.fit_sigma
 
-        normalized = normalize(xs, ys, ref_ys=initial_model(xs), deg=args.deg, continuum_ranges=continuum_ranges,
+        normalized, snr = normalize(xs, ys, ref_ys=initial_model(xs), deg=args.deg, continuum_ranges=continuum_ranges,
                                method=None, requested_plot=plt.figure().add_subplot(111))
 
         image_norm1 = "%05d_norm1.png" % n
@@ -188,7 +189,7 @@ def main():
 
             logger.debug("fit info: %s", fitter.fit_info)
 
-            normalized = normalize(xs, ys, ref_ys=final_model(xs), deg=args.deg, continuum_ranges=continuum_ranges,
+            normalized, snr = normalize(xs, ys, ref_ys=final_model(xs), deg=args.deg, continuum_ranges=continuum_ranges,
                                    method=None, requested_plot=plt.figure().add_subplot(111))
 
             image_norm2 = "%05d_norm2.png" % n
@@ -223,6 +224,7 @@ def main():
         text_file.write("\\hline\n")
         text_file.write("Resolution $\\delta\\lambda/\\lambda$ & %s \\\\\n" % spectrum.resolution)
         text_file.write("Sigma & %s \\\\\n" % display(sigma.to('AA'), "%.2f"))
+        text_file.write("SNR & %.0f \\\\\n" % snr)
         text_file.write("\\hline\n")
         text_file.write("Observation date $(UTC)$ & %s \\\\\n" % spectrum.obs_date.iso)
         text_file.write("Light travel time& %s \\\\\n" % display(light_travel_time.to('min'), "%.1f"))
@@ -252,8 +254,8 @@ def main():
 
     # end spectra
 
-    vmin = np.min([np.nanmin(diff.diff) for diff in diff_plots])
-    vmax = np.max([np.nanmax(diff.diff) for diff in diff_plots])
+    vmin = max(-max_diff, np.min([np.nanmin(diff.diff) for diff in diff_plots]))
+    vmax = min(+max_diff, np.max([np.nanmax(diff.diff) for diff in diff_plots]))
 
     fig = plt.figure(figsize=[6.4, 4.8 * 2])
     plot = fig.add_subplot(111)

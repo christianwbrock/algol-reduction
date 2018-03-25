@@ -8,27 +8,35 @@ from math import ceil
 
 from astropy.units import Unit
 
-from astropy.convolution import Gaussian1DKernel
+from astropy.convolution import Gaussian1DKernel, Box1DKernel
 from astropy.convolution import convolve
 
-from reduction.linearinterpolation import LinearInterpolation
+from reduction.spectrum import Spectrum
 
 
-def convolve_with_gauss(f, stddev_AA):
-    assert isinstance(f, LinearInterpolation), 'unexpected type {}'.format(type(f))
+def convolve_with_gauss(spectrum, stddev_AA):
+    return convolve_with_something(spectrum, stddev_AA, lambda stddev_px, x_size: Gaussian1DKernel(stddev_px, x_size=x_size))
+
+
+def convolve_with_box(spectrum, stddev_AA):
+    return convolve_with_something(spectrum, stddev_AA, lambda stddev_px, x_size: Box1DKernel(stddev_px))
+
+
+def convolve_with_something(spectrum, stddev_AA, make_kernel):
+    assert isinstance(spectrum, Spectrum), 'unexpected type {}'.format(type(spectrum))
 
     if isinstance(stddev_AA, Unit):
         stddev_AA = stddev_AA.to('AA').value
 
-    stddev_px = stddev_AA / f.dx
+    stddev_px = stddev_AA / spectrum.dx
     x_size = int(ceil(5 * stddev_px))
     if x_size % 2 == 0:
         x_size += 1
 
-    kernel = Gaussian1DKernel(stddev_px, x_size=x_size)
+    kernel = make_kernel(stddev_px, x_size)
 
-    xs = f.xs
-    ys = convolve(f.ys, kernel=kernel, boundary=None)
+    xs = spectrum.xs
+    ys = convolve(spectrum.ys, kernel=kernel, boundary=None)
 
     assert len(xs) == len(ys)
 
@@ -39,7 +47,7 @@ def convolve_with_gauss(f, stddev_AA):
 
     assert len(xs) == len(ys)
 
-    return LinearInterpolation.from_arrays(xs, ys)
+    return Spectrum.from_arrays(xs, ys)
 
 
 def deconvolve_with_gauss(xs, ys, sigma):
