@@ -99,7 +99,7 @@ def normalize_args(spectrum, args, requested_plot=None, cut=15):
                               requested_plot, cut)
 
 
-def normalize_spectrum(spectrum, ref_spectrum, degree, ranges, method, center_minimum, requested_plot=None, cut=15):
+def normalize_spectrum(spectrum, ref_spectrum, degree, ranges = None, method = None, center_minimum = None, requested_plot=None, cut=15):
     if isinstance(spectrum, str):
         spectrum = Spectrum.load(spectrum)
 

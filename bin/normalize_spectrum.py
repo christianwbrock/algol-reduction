@@ -12,6 +12,8 @@ from reduction.spectrum import Spectrum
 from argparse import ArgumentParser
 from matplotlib import pyplot as plt
 
+from os.path import basename
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,9 @@ def main():
     logging.basicConfig(level=get_loglevel(logger, args))
 
     for filename in poly_iglob(args.filenames):
-        normalize_args(filename, args, requested_plot=plt.axes())
+        requested_plot = plt.axes()
+        normalize_args(filename, args, requested_plot)
+        requested_plot.set_title(basename(filename))
         plt.show()
 
 
