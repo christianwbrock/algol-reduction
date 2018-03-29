@@ -1,6 +1,7 @@
 import random
 import itertools
 from math import isinf
+from numpy import nextafter
 
 from reduction.utils.lebesgue import LebesgueSet
 from reduction.utils.ranges import closed_range
@@ -71,3 +72,13 @@ def test_zoom():
 def test_measure():
     assert 1 == closed_range(1, 2).measure()
     assert isinf(LebesgueSet([1, 2], left_infinite=True).measure())
+
+
+def test_contains():
+    a = closed_range(1, 2)
+
+    assert nextafter(1, 0) not in a
+    assert 1.0 in a
+    assert 1.5 in a
+    assert 2.0 in a
+    assert nextafter(2, 3) not in a

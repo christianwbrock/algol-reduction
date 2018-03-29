@@ -72,6 +72,10 @@ class LebesgueSet(object):
         return (self.left_infinite == other.left_infinite and
                 self.points == other.points)
 
+    def __contains__(self, x):
+        """True if x is in one of the closed intervals defining self."""
+        return self.status(x) >= 0
+
     def __invert__(self):
         """Compute the set's complement"""
         return LebesgueSet(self.points, not self.left_infinite, fast=True)
@@ -137,10 +141,6 @@ class LebesgueSet(object):
     def is_boundary(self, x):
         """True if x is one end of one of the intervals"""
         return self.status(x) == 0
-
-    def is_adherent(self, x):
-        """True if x is in one of the closed intervals defining self."""
-        return self.status(x) >= 0
 
     def deltas(self, negated=False):
         infinite = self.left_infinite ^ (1 if negated else 0)
