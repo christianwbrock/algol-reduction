@@ -3,7 +3,7 @@
 from _weakref import ref
 
 from reduction.spectrum import Spectrum
-from reduction.instrument import convolve_with_box
+from reduction.instrument import convolve_with_box, convolve_with_gauss
 
 import numpy as np
 from numpy.polynomial.hermite import hermfit, hermval
@@ -19,8 +19,12 @@ arg_parser = ArgumentParser(add_help=False)
 """
 Use this parser as parent parser in client command line scripts.
 """
-arg_parser.add_argument('-r', '--ref', help='normalized reference spectrum')
-arg_parser.add_argument('-d', '--degree', type=int, default=3,
+arg_parser.add_argument('-r', '--ref', metavar='reference-spectrum',
+                        help='An ease source of reference spectra is "The POLLUX Database of Stellar Spectra" '
+                             '<http://pollux.graal.univ-montp2.fr>. Also "iSpec" <http://www.blancocuaresma.com/s/iSpec> '
+                             'can be used as a frontend for stellar models as SPECTRUM, Turbospectrum, SME, MOOG, '
+                             'Synthe/WIDTH9 and others.')
+arg_parser.add_argument('-d', '--degree', metavar='polynomial-degree', type=int, default=3,
                         help='degree of the polynomial to be fitted (default: %(default)s)')
 arg_parser.add_argument('-c', '--continuum-range', dest='ranges', nargs=2, type=float, metavar=('xmin', 'xmax'),
                         action='append', required=False,
@@ -28,7 +32,11 @@ arg_parser.add_argument('-c', '--continuum-range', dest='ranges', nargs=2, type=
 arg_parser.add_argument('--method', choices=['hermit', 'polynomial'], default='polynomial',
                         help='(default:  %(default)s)')
 arg_parser.add_argument('--center-minimum', nargs=3, type=float, metavar=('xmin', 'xmax', 'box-size'),
-                        help='calculate redshift from plot minimum')
+                        help='calculate redshift from plot minimum between xmin and xmax after applying a box filter')
+arg_parser.add_argument('--convolve-reference', type=float, metavar='stddev',
+                        help='convolve reference spectrum with a gauss kernel to fit the spectrum resolution.')
+arg_parser.add_argument('--convolve-spectrum', type=float, metavar='stddev',
+                        help='convolve spectrum with a gauss kernel. <HACK>')
 
 
 def fit_polynomial_args(xs, ys, args):
@@ -96,15 +104,22 @@ def _ranges_to_mask(xs, ranges):
 
 def normalize_args(spectrum, args, requested_plot=None, cut=15):
     return normalize_spectrum(spectrum, args.ref, args.degree, args.ranges, args.method, args.center_minimum,
-                              requested_plot, cut)
+                              args.convolve_spectrum, args.convolve_reference, requested_plot, cut)
 
 
-def normalize_spectrum(spectrum, ref_spectrum, degree, ranges = None, method = None, center_minimum = None, requested_plot=None, cut=15):
+def normalize_spectrum(spectrum, ref_spectrum, degree, ranges=None, method=None, center_minimum=None,
+                       convolve_spectrum=None, convolve_reference=None, requested_plot=None, cut=15):
     if isinstance(spectrum, str):
         spectrum = Spectrum.load(spectrum)
 
+    if spectrum and convolve_spectrum:
+        spectrum = convolve_with_gauss(spectrum, convolve_spectrum)
+
     if isinstance(ref_spectrum, str):
         ref_spectrum = Spectrum.load(ref_spectrum)
+
+    if ref_spectrum and convolve_reference:
+        ref_spectrum = convolve_with_gauss(ref_spectrum, convolve_reference)
 
     xs = spectrum.xs[cut:-cut]
     ys = spectrum.ys[cut:-cut]
