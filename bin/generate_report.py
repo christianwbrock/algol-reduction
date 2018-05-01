@@ -31,6 +31,7 @@ import numpy as np
 
 import os
 import os.path
+import sys
 
 from collections import namedtuple
 
@@ -92,6 +93,12 @@ def main():
     text_file.write("\\author{%s\\\\by Christian Brock}\n" % os.path.basename(__file__).replace('_', '\\_'))
     text_file.write("\\begin{document}\n")
     text_file.write("\\maketitle\n")
+    text_file.write("\\begin{verbatim}\n")
+
+    for k,v in args.__dict__.items():
+        text_file.write("--%s %s\n" % (k, v))
+
+    text_file.write("\\end{verbatim}\n")
     text_file.write("\\tableofcontents\n")
 
     diff_image_name = "diff_by_phase.png"
