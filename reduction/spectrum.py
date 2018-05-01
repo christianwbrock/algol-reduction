@@ -20,6 +20,16 @@ class Spectrum:
 
     def __init__(self, x0, dx, nx, ys, unit=u.AA, filename=None, hdu_nbr=None, observer=None, obs_date=None,
                  exposure=None, resolution=None):
+
+        # converts x0 and dx to Angstrom
+        if unit:
+            if isinstance(unit, str):
+                unit = unit.lower()
+
+            if unit != u.AA and unit != 'aa' and unit != 'angstrom':
+                x0 = u.Quantity(x0, unit).to(u.AA).value
+                dx = u.Quantity(dx, unit).to(u.AA).value
+
         self.x0 = x0
         self.dx = dx
         self.nx = nx
@@ -41,15 +51,6 @@ class Spectrum:
             self.short_name += os.path.basename(self.filename)
         if self.hdu_nbr:
             self.short_name += "(" + self.hdu_nbr + ")"
-
-        # converts x0 and dx to Angstrom
-        if unit:
-            if isinstance(unit, str):
-                unit = unit.lower()
-
-            if unit != u.AA and unit.lower() != 'aa' and unit.lower() != 'angstrom':
-                self.x0 = u.Quantity(self.x0, unit).to(u.AA).value
-                self.dx = u.Quantity(self.dx, unit).to(u.AA).value
 
     def __call__(self, x):
         return np.interp(x, self.xs, self.ys, left=np.NaN, right=np.NaN)
@@ -206,13 +207,17 @@ class Spectrum:
 
         hdr = arg.header
 
-        if hdr.get('DATE-OBS') and len(cls._fix_date_str(hdr.get('DATE-OBS'))) >= len('2017-01-01T19:55'):
-            obs_date = Time(cls._fix_date_str(hdr.get('DATE-OBS')), format='isot')
+        date_obs = hdr.get('DATE-OBS')
+        if date_obs:
+            date_obs = cls._fix_date_str(date_obs)
 
-        elif hdr.get('DATE-OBS') and len(hdr.get('DATE-OBS')) == len('2017-01-01') \
+        if date_obs and len(date_obs) >= len('2017-01-01T19:55'):
+            obs_date = Time(date_obs, format='isot')
+
+        elif date_obs and len(date_obs) == len('2017-01-01') \
                 and hdr.get('TIME-OBS') and len(hdr.get('TIME-OBS') == len('17:55:22')):
             logger.warning('field "DATE-OBS" contains only the date, no time')
-            obs_date = Time(hdr.get('DATE-OBS') + 'T' + hdr.get('TIME-OBS'), format='isot')
+            obs_date = Time(date_obs + 'T' + hdr.get('TIME-OBS'), format='isot')
 
         elif hdr.get('CIV-DATE'):
             obs_date = Time(hdr.get('CIV-DATE'), format='isot')
@@ -221,7 +226,7 @@ class Spectrum:
             obs_date = Time(hdr.get('JD'), format='jd')
 
         elif hdr.get('MJD'):
-            obs_date = Time(hdr.get('CIV-DATE'), format='mjd')
+            obs_date = Time(hdr.get('MJD'), format='mjd')
 
         else:
             logger.error('missing field obs-date, civ-date, etc')
