@@ -1,9 +1,8 @@
 """ Normalize spectra
 """
-from _weakref import ref
-
 from reduction.spectrum import Spectrum
 from reduction.instrument import convolve_with_box, convolve_with_gauss
+from reduction.utils.ranges import closed_range, LebesgueSet
 
 import numpy as np
 from numpy.polynomial.hermite import hermfit, hermval
@@ -29,6 +28,9 @@ arg_parser.add_argument('-d', '--degree', metavar='polynomial-degree', type=int,
 arg_parser.add_argument('-c', '--continuum-range', dest='ranges', nargs=2, type=float, metavar=('xmin', 'xmax'),
                         action='append', required=False,
                         help='one or more continuum ranges used for the polynomial fit')
+arg_parser.add_argument('-C', '--non-continuum-range', dest='non_ranges', nargs=2, type=float, metavar=('xmin', 'xmax'),
+                        action='append', required=False,
+                        help='one or more ranges not in the continuum used for the polynomial fit')
 arg_parser.add_argument('--method', choices=['hermit', 'polynomial'], default='polynomial',
                         help='(default:  %(default)s)')
 arg_parser.add_argument('--center-minimum', nargs=3, type=float, metavar=('xmin', 'xmax', 'box-size'),
@@ -39,31 +41,93 @@ arg_parser.add_argument('--convolve-spectrum', type=float, metavar='stddev',
                         help='convolve spectrum with a gauss kernel. <HACK>')
 
 
-def fit_polynomial_args(xs, ys, args):
-    return fit_polynomial(xs, ys, args.degree, args.ranges, args.method)
+def normalize_args(spectrum, args, requested_plot=None, requested_spectra=None, cut=15):
+    return _normalize_spectrum(spectrum, args.ref, args.degree, args.ranges, args.non_ranges, args.method,
+                               args.center_minimum, args.convolve_spectrum, args.convolve_reference, requested_plot,
+                               requested_spectra, cut)
 
 
-def fit_polynomial(xs, ys, deg, ranges, method):
+def _normalize_spectrum(spectrum, ref_spectrum, degree, ranges=None, non_ranges=None, method=None, center_minimum=None,
+                        convolve_spectrum=None, convolve_reference=None, requested_plot=None, requested_spectra=None,
+                        cut=15):
+    if isinstance(spectrum, str):
+        spectrum = Spectrum.load(spectrum)
+
+    if spectrum and convolve_spectrum and convolve_spectrum > 0.0:
+        spectrum = convolve_with_gauss(spectrum, convolve_spectrum)
+
+    if isinstance(ref_spectrum, str):
+        ref_spectrum = Spectrum.load(ref_spectrum)
+
+    spectrum_resolution = spectrum.resolution
+
+    if cut and cut > 0:
+        spectrum = Spectrum.from_arrays(spectrum.xs[cut:-cut], spectrum.ys[cut:-cut], spectrum.filename)
+
+    if ref_spectrum:
+        if convolve_reference:
+            if convolve_reference > 0.0:
+                ref_spectrum = convolve_with_gauss(ref_spectrum, convolve_reference)
+        elif spectrum_resolution:
+            convolve_reference = 0.5 * (ref_spectrum.xmax + ref_spectrum.xmin) / spectrum_resolution
+            ref_spectrum = convolve_with_gauss(ref_spectrum, convolve_reference)
+
+    xs = spectrum.xs
+    ys = spectrum.ys
+
+    ys /= np.nanmax(ys)
+
+    if center_minimum and ref_spectrum:
+        min_spectrum = _find_minimum(Spectrum.from_arrays(xs, ys), center_minimum)
+        min_ref = _find_minimum(ref_spectrum, center_minimum)
+
+        redshift = min_ref - min_spectrum
+    else:
+        redshift = 0.0
+
+    xs = xs + redshift
+
+    continuum_ranges = closed_range(np.nanmin(xs), np.nanmax(xs))
+    if ref_spectrum:
+        continuum_ranges &= closed_range(ref_spectrum.xmin, ref_spectrum.xmax)
+
+    if ranges:
+        continuum_ranges &= _list_to_set(ranges)
+
+    if non_ranges:
+        continuum_ranges &= ~ _list_to_set(non_ranges)
+
+    ref_ys = ref_spectrum(xs) if ref_spectrum else None
+
+    return normalize(xs, ys, ref_ys, degree, continuum_ranges, method, requested_plot, requested_spectra)
+
+
+def _find_minimum(spectrum, minmax):
+    boxed = convolve_with_box(spectrum, minmax[2])
+    mask = [minmax[0] <= x <= minmax[1] for x in boxed.xs]
+    index = np.nanargmin(boxed.ys[mask])
+    return boxed.xs[mask][index]
+
+
+def fit_polynomial(xs, ys, deg, continuum_ranges, method):
     """
-    return a polynomial of a given degree that best fits the data points 
+    return a polynomial of a given degree that best fits the data points
     passed by xs and ys in the x ranges.
-    
+
     :param xs: array_like, shape(M,)
         x-coordinates of the M sample points ``(xs[i], ys[i])``.
     :param ys: array_like, shape(M,)
         y-coordinates of the M sample points ``(xs[i], ys[i])``.
     :param deg: int
-        Degree of the fitting polynomial 
-    :param ranges: array_like, shape(N,2)
-        At least one x-min, x-max range of points in xs to be used
-        for fitting the polynomial.
+        Degree of the fitting polynomial
+    :param continuum_ranges: LebesgueSet
+        Defines ranges belonging top the continuum
     :param method: either 'hermit' or 'polynomial' (default: 'polynomial')
     """
 
     assert len(xs) == len(ys)
     assert deg > 0
-    assert len(ranges) > 0
-    assert len(ranges[0]) == 2
+    assert not continuum_ranges or isinstance(continuum_ranges, LebesgueSet)
 
     assert method in ['hermit', 'polynomial', None]
 
@@ -72,7 +136,7 @@ def fit_polynomial(xs, ys, deg, ranges, method):
     ys = np.asarray(ys)
     xs = np.asarray(xs)
 
-    mask = _ranges_to_mask(xs, ranges)
+    mask = _ranges_to_mask(xs, continuum_ranges)
     mask &= np.logical_not(np.isnan(xs))
     mask &= np.logical_not(np.isnan(ys))
 
@@ -93,68 +157,35 @@ def fit_polynomial(xs, ys, deg, ranges, method):
 
 
 def _ranges_to_mask(xs, ranges):
-    mask = np.full(len(xs), fill_value=False, dtype=bool)
-    for rng in ranges:
-        assert len(rng) >= 2
+    if ranges:
+        assert isinstance(ranges, LebesgueSet)
+        return np.array([x in ranges for x in xs])
 
-        mask |= [rng[0] <= x <= rng[1] for x in xs]
-
-    return mask
-
-
-def normalize_args(spectrum, args, requested_plot=None, cut=15):
-    return normalize_spectrum(spectrum, args.ref, args.degree, args.ranges, args.method, args.center_minimum,
-                              args.convolve_spectrum, args.convolve_reference, requested_plot, cut)
-
-
-def normalize_spectrum(spectrum, ref_spectrum, degree, ranges=None, method=None, center_minimum=None,
-                       convolve_spectrum=None, convolve_reference=None, requested_plot=None, cut=15):
-    if isinstance(spectrum, str):
-        spectrum = Spectrum.load(spectrum)
-
-    if spectrum and convolve_spectrum:
-        spectrum = convolve_with_gauss(spectrum, convolve_spectrum)
-
-    if isinstance(ref_spectrum, str):
-        ref_spectrum = Spectrum.load(ref_spectrum)
-
-    if ref_spectrum and convolve_reference:
-        ref_spectrum = convolve_with_gauss(ref_spectrum, convolve_reference)
-
-    xs = spectrum.xs[cut:-cut]
-    ys = spectrum.ys[cut:-cut]
-
-    ys /= np.nanmax(ys)
-
-    if center_minimum and ref_spectrum:
-        min_spectrum = _find_minimum(Spectrum.from_arrays(xs, ys), center_minimum)
-        min_ref = _find_minimum(ref_spectrum, center_minimum)
-
-        redshift = min_ref - min_spectrum
     else:
-        redshift = 0.0
-
-    xs = xs + redshift
-
-    if not ranges:
-        ranges = [[xs[0], xs[-1]]]
-        if ref_spectrum:
-            ranges[0][0] = np.max((ranges[0][0], ref_spectrum.xmin))
-            ranges[0][1] = np.min((ranges[0][1], ref_spectrum.xmax))
-
-    ref_ys = ref_spectrum(xs) if ref_spectrum else None
-
-    return normalize(xs, ys, ref_ys, degree, ranges, method, requested_plot)
+        return np.full(len(xs), fill_value=True, dtype=bool)
 
 
-def _find_minimum(spectrum, range):
-    boxed = convolve_with_box(spectrum, range[2])
-    mask = [range[0] <= x <= range[1] for x in boxed.xs]
-    index = np.nanargmin(boxed.ys[mask])
-    return boxed.xs[mask][index]
+def _list_to_set(lst):
+    """
+    convert a list of range boundaries to a LebesgueSet
+    """
+
+    if isinstance(lst, LebesgueSet):
+        return lst
+
+    assert not lst or np.ndim(lst) == 2
+    assert not lst or np.shape(lst)[1] >= 2
+
+    result = None
+
+    for item in lst:
+        item = closed_range(item[0], item[1])
+        result = result.union(item) if result else item
+
+    return result
 
 
-def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None):
+def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None, requested_spectra=None):
     """
     :param xs: array_like, shape(M,)
         x-coordinates of the M sample points.
@@ -169,12 +200,15 @@ def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None
         for fitting the polynomial.
     :param method: either 'hermit' or 'polynomial' (default: 'polynomial')
     :param requested_plot: If present, a plot of the normalization is generated.
+    :param requested_spectra: If present, a dictionary used to store  object, reference and normalized spectrum.
 
     :return: ys divided by the pest fitting polynomial and the std-dev
     """
 
     assert len(xs) == len(ys)
     assert ref_ys is None or len(xs) == len(ref_ys)
+
+    assert continuum_ranges is None or isinstance(continuum_ranges, LebesgueSet)
 
     assert deg > 0
     # assert ranges.shape[0] > 0
@@ -185,13 +219,13 @@ def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None
     else:
         poly = fit_polynomial(xs, ys, deg, continuum_ranges, method=method)
 
-    array = np.array([ys[i] / poly(xs[i]) for i in range(len(xs))])
+    norm = np.array([ys[i] / poly(xs[i]) for i in range(len(xs))])
 
     mask = _ranges_to_mask(xs, continuum_ranges)
     if ref_ys is not None:
-        stddev = np.nanstd((array / ref_ys)[mask])
+        stddev = np.nanstd((norm / ref_ys)[mask])
     else:
-        stddev = np.nanstd(array[mask])
+        stddev = np.nanstd(norm[mask])
 
     snr = 1.0 / stddev
 
@@ -207,8 +241,9 @@ def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None
         plot.set_xlim(xlim)
         plot.set_ylim(__get_ylim(1.3, xlim, xs, ys, ref_ys))
 
-        for r in continuum_ranges:
-            plot.axvspan(r[0], r[1], alpha=0.25)
+        if continuum_ranges and continuum_ranges.is_bounded():
+            for r in continuum_ranges.intervals():
+                plot.axvspan(r[0], r[1], alpha=0.25)
 
         plot.plot(xs, ys, label='meas')
 
@@ -217,19 +252,25 @@ def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None
             plot.plot(xs, ys / ref_ys, label='meas / ref')
 
         plot.plot(xs, poly(xs), label='polynomial')
-        plot.plot(xs, array, label='normalized')
+        plot.plot(xs, norm, label='normalized')
 
         plot.legend()
 
         if not requested_plot:
             plt.show()
+    
+    if requested_spectra is not None:
+        requested_spectra['xs'] = xs
+        requested_spectra['ys'] = ys
+        requested_spectra['ref_ys'] = ref_ys
+        requested_spectra['norm'] = norm
 
-    return array, snr
+    return norm, snr
 
 
 def __get_xlim(xs, ranges, y1, y2):
-    min_x = max(xs[0], ranges[0][0])
-    max_x = min(xs[-1], ranges[-1][-1])
+    min_x = max(xs[0], ranges.lower_bound())
+    max_x = min(xs[-1], ranges.upper_bound())
 
     for y in [y1, y2]:
 
@@ -249,7 +290,8 @@ def __get_xlim(xs, ranges, y1, y2):
 
 
 def __get_ylim(scale, xlim, xs, y1, y2):
-    mask = _ranges_to_mask(xs, [xlim])
+
+    mask = _ranges_to_mask(xs, closed_range(*xlim))
 
     min_y = np.min(y1[mask])
     max_y = np.max(y1[mask])

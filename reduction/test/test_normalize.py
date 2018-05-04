@@ -1,7 +1,7 @@
 import os.path
 import pytest
 
-from reduction.normalize import normalize_spectrum
+from reduction.normalize import _normalize_spectrum
 from reduction.spectrum import Spectrum
 
 from matplotlib import pyplot as plt
@@ -21,5 +21,5 @@ def test_normalize(reference, degree, method, center):
 
     spectrum = Spectrum.load(os.path.join(os.path.dirname(__file__), "../../data/Wega_2017_07_21_01-noh2o.fit"))
     plot = plt.axes()
-    normalize_spectrum(spectrum, reference, degree=degree, method=method, center_minimum=center, requested_plot=plot)
+    _normalize_spectrum(spectrum, reference, degree=degree, method=method, center_minimum=center, requested_plot=plot)
     plt.close()

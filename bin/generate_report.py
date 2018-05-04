@@ -10,6 +10,7 @@ from reduction.spectrum import Spectrum
 from reduction.stars.algol import Algol, algol_coordinate
 from reduction.constants import H_ALPHA
 from reduction.normalize import normalize
+from reduction.utils.ranges import closed_range
 
 from astropy import constants as const
 from astropy import units as u
@@ -48,7 +49,7 @@ def main():
 
     max_diff = 0.25
     padding = 10.0
-    continuum_ranges = ((6520, H_ALPHA.value - padding), (H_ALPHA.value + padding, 6610))
+    continuum_ranges = closed_range(6520, H_ALPHA.value - padding) | closed_range(H_ALPHA.value + padding, 6610)
 
     parser = ArgumentParser(parents=[filename_parser('spectrum'), verbose_parser],
                             description='Generate LaTeX report displaying spectrums normalized around the Halpha line.')
@@ -210,8 +211,8 @@ def main():
         image_diff = "%05d_diff.png" % n
 
         xlim = np.asarray(final_model.get_xlimits())
-        xlim[0] = max(xlim[0], continuum_ranges[0][0])
-        xlim[1] = min(xlim[1], continuum_ranges[-1][-1])
+        xlim[0] = max(xlim[0], continuum_ranges.lower_bound())
+        xlim[1] = min(xlim[1], continuum_ranges.upper_bound())
 
         create_diff_plot(final_model, initial_model, normalized, spectrum.short_name, xlim, xs, ys,
                          os.path.join(args.output, image_diff))

@@ -1,0 +1,13 @@
+-v
+-v
+--degree
+3
+--center-minimum
+6553
+6573
+1.5
+-C
+6553
+6573
+-r
+./data/synth/CONV_R50._L6563_W200._A_p12500g4.0z-0.5t2.0_a0.00c0.00n0.00o0.00r0.00s0.00_VIS.spec
