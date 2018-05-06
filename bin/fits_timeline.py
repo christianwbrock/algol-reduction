@@ -68,6 +68,32 @@ def show_time_line(star, dates_by_observer: Dict[str, List[Time]], plot: plt):
     plot.set_xlabel('Phase')
 
 
+def flat(dates_by_observer):
+    for obs, times in dates_by_observer.items():
+        for time, duration in times:
+            yield obs, time, duration
+
+
+def find_observations_overlapping_in_time(dates_by_observer):
+
+    for i, obs_times1 in enumerate(flat(dates_by_observer)):
+        for j, obs_times2 in enumerate(flat(dates_by_observer)):
+
+            if j >= i:
+                continue
+
+            obs1 = obs_times1[0]
+            start1 = obs_times1[1]
+            end1 = start1 + obs_times1[2]
+
+            obs2 = obs_times2[0]
+            start2 = obs_times2[1]
+            end2 = start2 + obs_times2[2]
+
+            if not (start1 > end2 or start2 > end1):
+                logger.warning("There is a time overlap between %s and %s at %s and %s", obs1, obs2, start1, start2)
+
+
 def main():
     argument_parser = ArgumentParser(description='Show observation times grouped by observer.',
                                      parents=[filename_parser('spectrum'), verbose_parser])
@@ -76,6 +102,8 @@ def main():
     logging.basicConfig(level=get_loglevel(logger, args))
 
     dates_by_observer = get_obs_dates_by_observer(poly_iglob(args.filenames))
+
+    find_observations_overlapping_in_time(dates_by_observer)
 
     fig = plt.figure()
 
