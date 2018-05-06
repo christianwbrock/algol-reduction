@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     parser = ArgumentParser(parents=[filename_parser('spectrum'), normalization_parser, verbose_parser],
-                            add_help=False, fromfile_prefix_chars='@',
+                            fromfile_prefix_chars='@',
                             description='Display normalized spectrum using continuum ranges.')
 
     plot_parser = parser.add_mutually_exclusive_group()
