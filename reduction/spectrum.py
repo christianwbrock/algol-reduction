@@ -79,39 +79,45 @@ class Spectrum:
             return cls.load_from_dat(filename)
 
     @classmethod
-    def load_from_dat(cls, filename):
-        """load spectrum from dat file using numpy.load_txt()
-
-        Any leading or trailing zero magnitudes are removed.
+    def load_from_dat(cls, filename, wavelength_column=0, intensity_column=1, remove_zeros=True):
+        """load spectrum from dat file using numpy.loadtxt()
 
         :param filename: of a one dimensional dat file i.e. a spectrum
-        :return: wavelengths, intensity and wavelength unit of the spectrum
+        :param intensity_column: column of the intensities
+        :param wavelength_column: column of the wavelength
+        :param remove_zeros:
+            Any leading or trailing zero intensities are removed.
+
+        :return: a Spectrum instance
         """
         data = np.loadtxt(filename)
 
         if not data.ndim == 2:
             raise ValueError('file "%s" contains no 2d-table.' % filename)
 
-        if not len(data[0]) >= 2:
-            raise ValueError('file "{0}" contains more than two columns'.format(filename))
+        requested_columns = 1 + max(wavelength_column, intensity_column)
+        if len(data[0]) < requested_columns:
+            raise ValueError('file "{0}" contains less than {1} columns'.format(filename, requested_columns))
 
         # determine range of non-zero data
         begin = 0
         end = len(data)
 
-        # remove leading zeros
-        while begin < end and data[begin][1] == 0:
-            begin += 1
+        if remove_zeros:
 
-        # remove trailing zeros
-        while begin < end and data[end - 1][1] == 0:
-            end -= 1
+            # remove leading zeros
+            while begin < end and data[begin][intensity_column] <= 0:
+                begin += 1
 
-        if not begin < end:
-            raise ValueError('file "{0}" contains only zeros in the second column'.format(filename))
+            # remove trailing zeros
+            while begin < end and data[end - 1][intensity_column] <= 0:
+                end -= 1
 
-        xs = data[begin:end, 0]
-        ys = data[begin:end, 1]
+            if not begin < end:
+                raise ValueError('file "{0}" contains only zeros in column {1}'.format(filename, intensity_column))
+
+        xs = data[begin:end, wavelength_column]
+        ys = data[begin:end, intensity_column]
 
         return cls.from_arrays(xs, ys, filename)
 
