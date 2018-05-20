@@ -26,7 +26,6 @@ def main():
     plot_parser = parser.add_mutually_exclusive_group()
     plot_parser.add_argument("--dont-plot", dest='plot', action='store_false', default=True,
                              help='do not display spectrum')
-    plot_parser.add_argument("--plot", dest='plot', action='store_true', help='display spectrum')
 
     parser.add_argument('--store-dat', metavar='filename.dat',
                         help='store object, reference and normalized spectrum as dat file')
