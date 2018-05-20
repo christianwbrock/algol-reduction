@@ -1,0 +1,12 @@
+-v
+-v
+--degree
+3
+--convolve-reference
+5
+--center-minimum
+6533
+6593
+5
+-r
+/home/guest/Documents/Astro/projects/reduction/data/synth/CONV_R9._L6563_W500._M_s6750g2.0z0.0t1.0_a0.00c0.00n0.00o0.00r0.00s0.00_VIS.spec
