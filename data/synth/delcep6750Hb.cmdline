@@ -1,7 +1,7 @@
 -v
 -v
 --degree
-3
+5
 --convolve-reference
 5
 --center-minimum
