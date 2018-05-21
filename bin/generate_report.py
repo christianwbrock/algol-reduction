@@ -304,10 +304,10 @@ def main():
     tex_file.write("\n")
     tex_file.write("The raw date is stored in {\\tt %s}\n" % "maxima.dat")
     tex_file.write("\n")
-    tex_file.write("\\begin{longtable}{|l|ll|ll|}\n")
+    tex_file.write("\\begin{longtable}{|l|lll|lll|}\n")
     tex_file.write("\\hline\n")
-    tex_file.write("phase & x & y & x & y \\\\\n")
-    max_file.write("#phase,x1,y1,x2,y2\n")
+    tex_file.write("phase & $\AA$ & $km/s$ & y & $\AA$ & $km/s$ & y \\\\\n")
+    max_file.write("#phase,w1,v1,y1,w2,v2,y2\n")
     tex_file.write("\\hline\n")
 
     for diff in diffs_by_phase:
@@ -324,14 +324,19 @@ def main():
                 x1, y1 = None, None
                 x2, y2 = x, y
 
+        v1 = ((x1 - H_ALPHA.value) / H_ALPHA.value * const.c).to('km/s').value if x1 else None
+        v2 = ((x2 - H_ALPHA.value) / H_ALPHA.value * const.c).to('km/s').value if x2 else None
+
         def _(value, fmt):
             return fmt % value if value else ''
 
-        tex_file.write("%.5f & %s & %s & %s & %s\\\\\n" %
-                       (diff.phase, _(x1, '%.1f'), _(y1, '%.3f'), _(x2, '%.1f'), _(y2, '%.3f')))
+        tex_file.write("%.5f & %s & %s & %s  & %s & %s & %s\\\\\n" %
+                       (diff.phase, _(x1, '%.1f'), _(v1, '%.0f'), _(y1, '%.3f'),
+                        _(x2, '%.1f'), _(v2, '%.0f'), _(y2, '%.3f')))
 
-        max_file.write("%.5f,%s,%s,%s,%s\n" %
-                       (diff.phase, _(x1, '%.1f'), _(y1, '%.3f'), _(x2, '%.1f'), _(y2, '%.3f')))
+        max_file.write("%.5f,%s,%s,%s,%s,%s,%s\n" %
+                       (diff.phase, _(x1, '%.1f'), _(v1, '%.0f'), _(y1, '%.3f'),
+                        _(x2, '%.1f'), _(v2, '%.0f'), _(y2, '%.3f')))
 
     tex_file.write("\\hline\n")
     tex_file.write("\\end{longtable}\n")
@@ -346,10 +351,9 @@ def plot_sorted_diff(args_cmap, args_output, sorted_diff_image_name, diffs_by_ph
     # create the trailed spectrum *sorted* by phase plot
     fig = plt.figure(figsize=[6.4, 4.8 * 2])
     plot = fig.add_subplot(111)
-    plot.set_title("measured - predicted")
     plot.set_xlim(disc_range.lower_bound(), disc_range.upper_bound())
     plot.set_ylabel('Spectra sorted by phase')
-
+    plot.set_xlabel('Wavelength ($\AA$)')
     sc = None
 
     left_xs = []
@@ -379,19 +383,25 @@ def plot_sorted_diff(args_cmap, args_output, sorted_diff_image_name, diffs_by_ph
         plot.plot(left_xs, left_ys, 'k')
         plot.plot(right_xs, right_ys, 'k')
 
+    ax2 = plot.twiny()
+    ax2.set_xlim(((np.asarray(plot.get_xlim()) - H_ALPHA.value) / H_ALPHA.value * const.c).to('km/s').value)
+    ax2.set_xlabel('Radial velocity ($km/s$)')
+
     fig.colorbar(sc)
     plt.savefig(os.path.join(args_output, sorted_diff_image_name))
     plt.close()
 
 
 def plot_diff(args_cmap, args_output, diff_image_name, diffs_by_phase, disc_range, vmin, vmax, plot_maxima):
-    # create the trailed spectrum by phase plot
+    """
+    Create the trailed spectrum by phase plot
+    """
     fig = plt.figure(figsize=[6.4, 4.8 * 2])
     plot = fig.add_subplot(111)
-    plot.set_title("measured - predicted")
     plot.set_ylim(-0.5, 1.5)
     plot.set_xlim(disc_range.lower_bound(), disc_range.upper_bound())
     plot.set_ylabel('Phase')
+    plot.set_xlabel('Wavelength ($\AA$)')
     for diff in diffs_by_phase:
 
         assert len(diff.wavelength) == len(diff.diff)
@@ -421,7 +431,12 @@ def plot_diff(args_cmap, args_output, diff_image_name, diffs_by_phase, disc_rang
         plot.plot(left_xs, left_ys, 'k')
         plot.plot(right_xs, right_ys, 'k')
 
+    ax2 = plot.twiny()
+    ax2.set_xlim(((np.asarray(plot.get_xlim()) - H_ALPHA.value) / H_ALPHA.value * const.c).to('km/s').value)
+    ax2.set_xlabel('Radial velocity ($km/s$)')
+
     fig.colorbar(sc)
+
     plt.savefig(os.path.join(args_output, diff_image_name))
     plt.close()
     return sc
@@ -452,6 +467,7 @@ def create_diff_plot(final_model, initial_model, normalized, maxima, title, xlim
     plot.vlines(H_ALPHA.value + redshift, *plot.get_ylim())
     plot.set_title(title)
     plot.legend(loc='upper right')
+
     plt.savefig(image_path)
     plt.close()
 
