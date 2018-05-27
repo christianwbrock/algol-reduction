@@ -16,15 +16,11 @@ from astropy import constants as const
 from astropy import units as u
 from astropy.coordinates import EarthLocation
 
-from astropy.modeling.functional_models import Gaussian1D
-
 from astropy.convolution import Box1DKernel
 from astropy.convolution import convolve
 
 from astropy.modeling.fitting import SimplexLSQFitter
 from reduction.nan_statistics import nan_leastsquare
-
-from scipy.optimize import curve_fit
 
 from argparse import ArgumentParser
 
@@ -36,7 +32,6 @@ import numpy as np
 
 import os
 import os.path
-import sys
 
 from collections import namedtuple
 
@@ -186,7 +181,7 @@ def main():
 
         redshift_from_data = u.Quantity(_find_minimum(xs, ys, spectrum.dx, 10, 1.5), u.AA) - H_ALPHA
 
-        sigma = H_ALPHA / (res or 15000)
+        sigma = H_ALPHA / (res or 15000) / 2.354
 
         initial_model = AlgolHAlphaModel(redshift=redshift_from_data, sigma=sigma)
         initial_model.scale.fixed = True
