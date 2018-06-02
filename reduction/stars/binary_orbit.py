@@ -230,11 +230,19 @@ class BinaryOrbit:
 
         v_1 = self.v1(t).to('km/s')
         v_1 += v0 or 0
-        plot.plot(t.jd, v_1, label=('%s m1=%.1f' % (self.name1, self.m1.value)))
+
+        l1_min = self.rv_to_rs(v_1.min()).value
+        l1_max = self.rv_to_rs(v_1.max()).value
+
+        plot.plot(t.jd, v_1, label=('%s [$%.1f .. %.1f \AA$]' % (self.name1, l1_min, l1_max)))
 
         v_2 = self.v2(t).to('km/s')
         v_2 += v0 or 0
-        plot.plot(t.jd, v_2, label=('%s m2=%.1f' % (self.name2, self.m2.value)))
+
+        l2_min = self.rv_to_rs(v_2.min()).value
+        l2_max = self.rv_to_rs(v_2.max()).value
+
+        plot.plot(t.jd, v_2, label=('%s [$%.1f .. %.1f \AA$]' % (self.name2, l2_min, l2_max)))
 
         if v0:
             v_0 = np.ones(t.size) * v0
@@ -246,8 +254,8 @@ class BinaryOrbit:
 
         # convert radial velocity to red-shift at H_alpha
         v_min, v_max = plot.get_ylim() * u.km / u.s
-        l_min = (v_min / const.c).to(1) * H_ALPHA
-        l_max = (v_max / const.c).to(1) * H_ALPHA
+        l_min = self.rv_to_rs(v_min)
+        l_max = self.rv_to_rs(v_max)
         addy.set_ylim(l_min.value, l_max.value)
 
         plot.xaxis.set_major_locator(plt.MaxNLocator(5))
@@ -257,9 +265,12 @@ class BinaryOrbit:
 
         addx.xaxis.set_minor_locator(plt.MultipleLocator(0.1))
 
-        plot.set_ylabel('Radial velocity (km/s)')
+        plot.set_ylabel('Radial velocity ($km/s$)')
         plot.set_xlabel('Julian date')
-        addy.set_ylabel(r'$\delta\lambda \| H\alpha (\AA)$')
+        addy.set_ylabel(r'$\delta\lambda at H\alpha (\AA)$')
         # addx.grid(True)
         plot.legend()
 
+    @staticmethod
+    def rv_to_rs(v_min):
+        return (v_min / const.c).to(1) * H_ALPHA
