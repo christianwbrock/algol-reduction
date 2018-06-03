@@ -74,10 +74,10 @@ def plot_many_files(args):
         label = os.path.basename(filename)
         show_file(filename, args.normalize, args.xrange, label, ax)
 
-        if not args.merge:
+        if not args.merge and not args.no_legend:
             ax.legend()
 
-    if args.merge:
+    if args.merge and not args.no_legend:
         plt.legend()
 
 
@@ -88,6 +88,7 @@ def main():
     parser.add_argument('--merge', '-m', default=False, action='store_true', help='show all spectra in a single plot')
     parser.add_argument('--normalize', '-n', default=False, action='store_true',
                         help='divide all spectra by their maximum value')
+    parser.add_argument('--no-legend', action='store_true', help='do not display plot legend')
 
     args = parser.parse_args()
 
