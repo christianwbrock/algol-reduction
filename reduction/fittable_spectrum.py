@@ -56,6 +56,8 @@ class FittableSpectrum(Fittable1DModel):
         return convolve_with_gauss(reference_spectrum, sigma)
 
     def _get_ref(self, sigma):
+        if sigma <= 0:
+            return self.reference_spectrum
         return self.__get_ref_from_cache(self.reference_spectrum, round(sigma, 3))
 
     def evaluate(self, x, redshift, scale, offset, sigma):

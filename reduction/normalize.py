@@ -1,16 +1,16 @@
 """ Normalize spectra
 """
-from reduction.spectrum import Spectrum
-from reduction.instrument import convolve_with_box, convolve_with_gauss
-from reduction.utils.ranges import closed_range, LebesgueSet
+import logging
+from argparse import ArgumentParser
 
 import numpy as np
 from numpy.polynomial.hermite import hermfit, hermval
 from matplotlib import pyplot as plt
 
-from argparse import ArgumentParser
+from reduction.spectrum import Spectrum, find_minimum
+from reduction.instrument import convolve_with_gauss
+from reduction.utils.ranges import closed_range, LebesgueSet
 
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,31 @@ arg_parser.add_argument('--convolve-spectrum', type=float, metavar='stddev',
 
 
 def normalize_args(spectrum, args, requested_plot=None, requested_spectra=None, cut=15):
+    """
+    Normalize spectrum using commandline args from `arg_arg_parser`.
+
+    Parameters
+    ----------
+        spectrum: Spectrum
+            the spectrum to normalize
+
+        args : dict
+            commandline args from `arg_arg_parser`
+
+        requested_plot : pyplot.axes or None
+            If not None, used to plot plot normalization
+
+        requested_spectra : dict or None
+            If not None, several intermediate results are stored here.
+
+        cut : int
+            the first and last `cut` values of the spectrum are discarded
+
+    Returns
+    -------
+        norm, snr: tupel
+            normalization result and the calculated SNR
+    """
     return _normalize_spectrum(spectrum, args.ref, args.degree, args.ranges, args.non_ranges, args.method,
                                args.center_minimum, args.convolve_spectrum, args.convolve_reference, requested_plot,
                                requested_spectra, cut)
@@ -78,8 +103,8 @@ def _normalize_spectrum(spectrum, ref_spectrum, degree, ranges=None, non_ranges=
     ys /= np.nanmax(ys)
 
     if center_minimum and ref_spectrum:
-        min_spectrum = _find_minimum(Spectrum.from_arrays(xs, ys), center_minimum)
-        min_ref = _find_minimum(ref_spectrum, center_minimum)
+        min_spectrum = find_minimum(Spectrum.from_arrays(xs, ys), *center_minimum)
+        min_ref = find_minimum(ref_spectrum, *center_minimum)
 
         redshift = min_ref - min_spectrum
     else:
@@ -102,27 +127,30 @@ def _normalize_spectrum(spectrum, ref_spectrum, degree, ranges=None, non_ranges=
     return normalize(xs, ys, ref_ys, degree, continuum_ranges, method, requested_plot, requested_spectra)
 
 
-def _find_minimum(spectrum, minmax):
-    boxed = convolve_with_box(spectrum, minmax[2])
-    mask = [minmax[0] <= x <= minmax[1] for x in boxed.xs]
-    index = np.nanargmin(boxed.ys[mask])
-    return boxed.xs[mask][index]
-
-
 def fit_polynomial(xs, ys, deg, continuum_ranges, method):
     """
-    return a polynomial of a given degree that best fits the data points
+    Return a polynomial of a given degree that best fits the data points
     passed by xs and ys in the x ranges.
 
-    :param xs: array_like, shape(M,)
-        x-coordinates of the M sample points ``(xs[i], ys[i])``.
-    :param ys: array_like, shape(M,)
-        y-coordinates of the M sample points ``(xs[i], ys[i])``.
-    :param deg: int
-        Degree of the fitting polynomial
-    :param continuum_ranges: LebesgueSet
-        Defines ranges belonging top the continuum
-    :param method: either 'hermit' or 'polynomial' (default: 'polynomial')
+    Parameters
+    ----------
+        xs: array_like, shape(M,)
+            x-coordinates of the M sample points ``(xs[i], ys[i])``.
+
+        ys: array_like, shape(M,)
+            y-coordinates of the M sample points ``(xs[i], ys[i])``.
+
+        deg: int
+            Degree of the fitting polynomial
+
+        continuum_ranges: LebesgueSet
+            Defines ranges belonging top the continuum
+
+        method: either 'hermit' or 'polynomial' (default: 'polynomial')
+
+    Returns
+    -------
+        polynomial : callable
     """
 
     assert len(xs) == len(ys)
@@ -187,22 +215,38 @@ def _list_to_set(lst):
 
 def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None, requested_spectra=None):
     """
-    :param xs: array_like, shape(M,)
-        x-coordinates of the M sample points.
-    :param ys: array_like, shape(M,)
-        values of the M sample points.
-    :param ref_ys: array_like, shape(M,) or None
-        reference values of the M sample points.
-    :param deg: int
-        Degree of the fitting polynomial 
-    :param continuum_ranges: array_like, shape(N,2)
-        At least one x-min, xmax range of points in xs to be used
-        for fitting the polynomial.
-    :param method: either 'hermit' or 'polynomial' (default: 'polynomial')
-    :param requested_plot: If present, a plot of the normalization is generated.
-    :param requested_spectra: If present, a dictionary used to store  object, reference and normalized spectrum.
+    Return a polynomial of a given degree that best fits the data points
+    passed by xs and ys in the x ranges.
 
-    :return: ys divided by the pest fitting polynomial and the std-dev
+    Parameters
+    ----------
+        xs: array_like, shape(M,)
+            x-coordinates of the M sample points ``(xs[i], ys[i])``.
+
+        ys: array_like, shape(M,)
+            y-coordinates of the M sample points ``(xs[i], ys[i])``.
+
+        ref_ys: array_like, shape(M,) or None
+            reference values of the M sample points.
+
+        deg: int
+            Degree of the fitting polynomial
+
+        continuum_ranges: LebesgueSet
+            Defines ranges belonging top the continuum
+
+        method: either 'hermit' or 'polynomial' (default: 'polynomial')
+
+        requested_plot : pyplot.axes or None
+            If not None, used to plot plot normalization
+
+        requested_spectra : dict or None
+            If not None, several intermediate results are stored here.
+
+    Returns
+    -------
+        norm, snr: tupel
+            normalization result and the calculated SNR
     """
 
     assert len(xs) == len(ys)
@@ -264,6 +308,7 @@ def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None
         requested_spectra['ys'] = ys
         requested_spectra['ref_ys'] = ref_ys
         requested_spectra['norm'] = norm
+        requested_spectra['fit'] = poly(xs)
 
     return norm, snr
 

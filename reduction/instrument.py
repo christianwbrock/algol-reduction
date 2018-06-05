@@ -7,11 +7,8 @@ In this module we assume a Gaussian instrument function
 from math import ceil
 
 from astropy.units import Unit
-
 from astropy.convolution import Gaussian1DKernel, Box1DKernel
 from astropy.convolution import convolve
-
-from reduction.spectrum import Spectrum
 
 
 def convolve_with_gauss(spectrum, stddev_AA):
@@ -23,6 +20,8 @@ def convolve_with_box(spectrum, stddev_AA):
 
 
 def convolve_with_something(spectrum, stddev_AA, make_kernel):
+    from reduction.spectrum import Spectrum
+
     assert isinstance(spectrum, Spectrum), 'unexpected type {}'.format(type(spectrum))
 
     if isinstance(stddev_AA, Unit):
