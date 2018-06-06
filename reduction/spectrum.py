@@ -2,14 +2,16 @@
 Methods for loading spectra and observation times from files.
 """
 
+import os.path
+import logging
+
 import numpy as np
 import astropy.units as u
 from astropy.time import Time
 from astropy.io import fits
 
-import os.path
+from reduction.instrument import convolve_with_box
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -69,8 +71,18 @@ class Spectrum:
         """
         First tries load_from_fits and when that fails load_from_dat
 
-        :param filename: filename
-        :param indices: which HDU to load, default: load only the first
+        Parameters
+        ----------
+        filename: str
+            file name of the spectrum
+
+        indices: slice
+            the HDU numbers of the spectra to load
+
+        Returns
+        -------
+        spectra: Spectrum or list
+            Depending on `indices` as singe spectrum or multiple spectra
         """
         try:
             return cls.load_from_fit(filename, indices)
@@ -82,13 +94,19 @@ class Spectrum:
     def load_from_dat(cls, filename, wavelength_column=0, intensity_column=1, remove_zeros=True):
         """load spectrum from dat file using numpy.loadtxt()
 
-        :param filename: of a one dimensional dat file i.e. a spectrum
-        :param intensity_column: column of the intensities
-        :param wavelength_column: column of the wavelength
-        :param remove_zeros:
-            Any leading or trailing zero intensities are removed.
+        Parameters
+        ----------
+        filename : str
+            file name of a one dimensional dat file i.e. a spectrum
 
-        :return: a Spectrum instance
+        intensity_column : int
+            column of the intensities
+
+        wavelength_column : int
+            column of the wavelength
+
+        remove_zeros : bool
+            Any leading or trailing zero intensities are removed.
         """
         data = np.loadtxt(filename)
 
@@ -123,6 +141,17 @@ class Spectrum:
 
     @staticmethod
     def from_arrays(xs, ys, filename=None):
+        """
+        Create spectrum from two arrays
+
+        Parameters
+        ----------
+        xs : array_like
+            the wavelength values of the spectrum have to be increasing and equidistant
+
+        ys : array_like
+            the intensity values, one for each wavelength value
+        """
 
         if not len(xs) == len(ys):
             raise ValueError("xs and ys differ in length")
@@ -140,11 +169,20 @@ class Spectrum:
     @classmethod
     def load_from_fit(cls, filename, indices=slice(1)):
         """
-        Load first spectrum from a fits file.
+        Loads one or more spectra from a fits file
 
-        :param filename: name of a one dimensional fits file i.e. a spectrum
-        :param indices: which HDU to load, default: load only the first
-        :return: the spectrum or spectra
+        Parameters
+        ----------
+        filename: str
+            file name of the spectrum
+
+        indices: slice
+            the HDU numbers of the spectra to load
+
+        Returns
+        -------
+        spectra: Spectrum or list
+            Depending on `indices` as singe spectrum or multiple spectra
         """
 
         with fits.open(filename) as hdu_list:
@@ -210,6 +248,21 @@ class Spectrum:
 
     @classmethod
     def _load_obs_time(cls, arg):
+        """
+        Load observation time attribute as float from fits or None if none exists.
+
+        `DATE-OBS`, `TIME-OBS`, `CIV-DATE`, `JD` and `MJD` are tested.
+
+        Parameters
+        ----------
+        arg : HDU
+            single HDU, HDUList or name of a one dimensional fits file i.e. a spectrum
+
+        Returns
+        -------
+        resol : float or None
+            attribute as float or None
+        """
 
         hdr = arg.header
 
@@ -245,8 +298,15 @@ class Spectrum:
         """
         Load 'resol' attribute as float from fits or None if none exists.
 
-        :param arg: single HDU, HDUList or name of a one dimensional fits file i.e. a spectrum
-        :return: 'resol' attribute as float or None
+        Parameters
+        ----------
+        arg : HDU
+            single HDU, HDUList or name of a one dimensional fits file i.e. a spectrum
+
+        Returns
+        -------
+        resol : float or None
+            attribute as float or None
         """
 
         res = arg.header.get('BSS_ITRP') or arg.header.get("RESOL") or arg.header.get('BSS_ESRP')
@@ -261,3 +321,32 @@ class Spectrum:
         assert isinstance(res, (type(None), float, int))
 
         return res
+
+
+def find_minimum(spectrum, min_x, max_x, box_size_AA):
+    """
+    Find minimum if a spectrum range after applying a box filter
+
+    Parameters
+    ----------
+    spectrum : Spectrum
+
+    min_x: float
+        lower bound where the minimum is looked for
+
+    max_x: float
+        upper bound where the minimum is looked for
+
+    box_size_AA: float
+        size of the box filter to be used
+
+    Returns
+    -------
+    minimum : float
+        The x value
+    """
+
+    boxed = convolve_with_box(spectrum, box_size_AA)
+    mask = [min_x <= x <= max_x for x in boxed.xs]
+    index = np.nanargmin(boxed.ys[mask])
+    return boxed.xs[mask][index]
