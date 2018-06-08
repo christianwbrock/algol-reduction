@@ -45,54 +45,75 @@ def main():
     fig = plt.figure(figsize=(10, 6))
     fig.set_tight_layout(True)
 
-    plot = fig.add_subplot(221)
-    plot.plot(spectrum.xs, spectrum.ys, label='meas')
-    plot.plot(spectrum.xs, reference_ys, label='synth')
-    plot.xaxis.set_major_formatter(plt.NullFormatter())
-    plot.set_title('measured and reference spectrum')
-    ylim = plot.get_ylim()
+    plot_221 = fig.add_subplot(221)
+    plot_221.plot(spectrum.xs, spectrum.ys, label='meas')
+    plot_221.plot(spectrum.xs, reference_ys, label='synth')
+    plot_221.xaxis.set_major_formatter(plt.NullFormatter())
+    plot_221.set_title('measured and reference spectrum')
+    ylim = plot_221.get_ylim()
 
     reference_shifted_ys = AlgolHAlphaModel(redshift=red_shift, sigma=instrument_fwhm / 2.4)(spectrum.xs)
 
-    plot = fig.add_subplot(222)
-    plot.plot(spectrum.xs, spectrum.ys, label='meas')
-    lines = plot.plot(spectrum.xs, reference_ys, ':', label='synth')
-    plot.plot(spectrum.xs, reference_shifted_ys, label='synth w/ redshift and instrument FWHM', color=lines[0].get_color())
-    plot.xaxis.set_major_formatter(plt.NullFormatter())
-    plot.yaxis.set_major_formatter(plt.NullFormatter())
-    plot.set_ylim(ylim)
-    plot.set_title('w/ redshift and instrument FWHM')
+    plot_222 = fig.add_subplot(222)
+    plot_222.plot(spectrum.xs, spectrum.ys, label='meas')
+    lines = plot_222.plot(spectrum.xs, reference_ys, ':', label='synth')
+    plot_222.plot(spectrum.xs, reference_shifted_ys, label='synth with redshift and instrument FWHM',
+                  color=lines[0].get_color())
+    plot_222.xaxis.set_major_formatter(plt.NullFormatter())
+    plot_222.yaxis.set_major_formatter(plt.NullFormatter())
+    plot_222.set_ylim(ylim)
+    plot_222.set_title('redshift and instrument FWHM')
 
-    plot = fig.add_subplot(223)
+    plot_224 = fig.add_subplot(224)
 
     requested_spectra = {}
     norm, snr = normalize(spectrum.xs, spectrum.ys, reference_shifted_ys, polynomial_degree, continuum_ranges,
                           method=None, requested_plot=None, requested_spectra=requested_spectra)
 
-    plot.plot(spectrum.xs, spectrum.ys, label='meas')
-    plot.plot(spectrum.xs, spectrum.ys / reference_shifted_ys, label='$meas/synth$')
-    plot.plot(spectrum.xs, requested_spectra['fit'], label='best fit')
+    plot_224.plot(spectrum.xs, spectrum.ys, label='meas')
+    plot_224.plot(spectrum.xs, spectrum.ys / reference_shifted_ys, label='$meas/synth$')
+    plot_224.plot(spectrum.xs, requested_spectra['fit'], label='best fit')
 
     if continuum_ranges and continuum_ranges.is_bounded():
         for r in continuum_ranges.intervals():
-            plot.axvspan(r[0], r[1], alpha=0.25)
+            plot_224.axvspan(r[0], r[1], alpha=0.25)
+            plot_224.text(0.5 * (r[0] + r[1]), 0.45, "fit range", ha="center", va="center", size=9)
 
-    plot.yaxis.set_major_formatter(plt.NullFormatter())
-    plot.set_ylim(ylim)
-    plot.set_title('best_fit of meas / ref (outside line)')
+    plot_224.yaxis.set_major_formatter(plt.NullFormatter())
+    plot_224.set_ylim(ylim)
+    plot_224.set_title('polynomial = best_fit (meas / ref)')
 
-    plot = fig.add_subplot(224)
+    plot_223 = fig.add_subplot(223)
 
-    plot.plot(spectrum.xs, spectrum.ys, label='meas',)
-    plot.plot(spectrum.xs, reference_shifted_ys, label='synth')
-    plot.plot(spectrum.xs, norm, label='normalized')
+    plot_223.plot(spectrum.xs, spectrum.ys, label='meas',)
+    plot_223.plot(spectrum.xs, reference_shifted_ys, label='synth')
+    plot_223.plot(spectrum.xs, norm, label='normalized')
 
-    if continuum_ranges and continuum_ranges.is_bounded():
-        for r in continuum_ranges.intervals():
-            plot.axvspan(r[0], r[1], alpha=0.25)
+    # if continuum_ranges and continuum_ranges.is_bounded():
+    #     for r in continuum_ranges.intervals():
+    #         plot_223.axvspan(r[0], r[1], alpha=0.25)
+    #         plot_223.text(0.5 * (r[0] + r[1]), 0.45, "fit range", ha="center", va="center", size=9)
 
-    plot.set_ylim(ylim)
-    plot.set_title('normalized = meas / best_fit')
+    plot_223.set_ylim(ylim)
+    plot_223.set_title('normalized = meas / polynomial')
+
+    from matplotlib.patches import ConnectionPatch
+
+    p1 = ConnectionPatch(axesA=plot_221, xyA=(0.97, 0.2), coordsA='axes fraction',
+                         axesB=plot_222, xyB=(0.03, 0.2), coordsB='axes fraction',
+                         arrowstyle='simple', color='r', mutation_scale=30, figure=fig)
+
+    p2 = ConnectionPatch(axesA=plot_222, xyA=(0.90, 0.03), coordsA='axes fraction',
+                         axesB=plot_224, xyB=(0.90, 0.97), coordsB='axes fraction',
+                         arrowstyle='simple', color='r', mutation_scale=30, figure=fig)
+
+    p3 = ConnectionPatch(axesA=plot_224, xyA=(0.03, 0.2), coordsA='axes fraction',
+                         axesB=plot_223, xyB=(0.97, 0.2), coordsB='axes fraction',
+                         arrowstyle='simple', color='r', mutation_scale=30, figure=fig, zorder=3)
+
+    plot_223.add_artist(p1)
+    plot_223.add_artist(p2)
+    plot_223.add_artist(p3)
 
     plt.show()
 
