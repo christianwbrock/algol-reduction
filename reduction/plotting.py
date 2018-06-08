@@ -19,7 +19,7 @@ def setup_plots(fontsize=8, usetex=True, figsize=None):
     import matplotlib
     if figsize:
         matplotlib.rc('figure', figsize=figsize, dpi=150)
-    matplotlib.rc('legend', fontsize=fontsize, handlelength=3)
+    matplotlib.rc('legend', fontsize=fontsize * 3 // 4, handlelength=3)
     matplotlib.rc('axes', titlesize=fontsize)
     matplotlib.rc('axes', labelsize=fontsize)
     matplotlib.rc('xtick', labelsize=fontsize)

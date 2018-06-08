@@ -210,67 +210,20 @@ class BinaryOrbit:
         return v2
 
     def plot_orbit(self, plot, v0=None, points=401):
-        """Plot a single orbit via matplotlib 
-         
-        :param plot: target matplotlib plot or subplot
-        :param v0: system radial velocity 
-        :param points: number of points in x directions
+        """Plot a binary orbit via matplotlib
 
-        TODO: display x-axis using matplotlib.dates.AutoDateFormatter
+        Parameters
+        ----------
+
+        plot: target matplotlib plot or subplot
+        v0: system radial velocity
+        points: number of points in x directions
         """
 
-        t0 = self.epoch
-        p = self.period
+        from reduction.plot_radial_velocity import plot_rv_by_phase
 
-        t = Time(np.linspace(t0.jd, (t0 + p).jd, points), format='jd')
+        def v1(t): return self.v1(t) + (v0 or 0)
 
-        # we need additional x and y axes
-        addx = plot.twiny()
-        addy = plot.twinx()
+        def v2(t): return self.v2(t) + (v0 or 0)
 
-        v_1 = self.v1(t).to('km/s')
-        v_1 += v0 or 0
-
-        l1_min = self.rv_to_rs(v_1.min()).value
-        l1_max = self.rv_to_rs(v_1.max()).value
-
-        plot.plot(t.jd, v_1, label=('%s [$%.1f .. %.1f \AA$]' % (self.name1, l1_min, l1_max)))
-
-        v_2 = self.v2(t).to('km/s')
-        v_2 += v0 or 0
-
-        l2_min = self.rv_to_rs(v_2.min()).value
-        l2_max = self.rv_to_rs(v_2.max()).value
-
-        plot.plot(t.jd, v_2, label=('%s [$%.1f .. %.1f \AA$]' % (self.name2, l2_min, l2_max)))
-
-        if v0:
-            v_0 = np.ones(t.size) * v0
-            plot.plot(t.jd, v_0, label=r'%.0f %s' % (v0.to('km/s').value, v0.to('km/s').unit))
-
-        # assure both x-scales match
-        plot.set_xlim((t0 - 0.1 * p).jd, (t0 + 1.1 * p).jd)
-        addx.set_xlim(-0.1, 1.1)
-
-        # convert radial velocity to red-shift at H_alpha
-        v_min, v_max = plot.get_ylim() * u.km / u.s
-        l_min = self.rv_to_rs(v_min)
-        l_max = self.rv_to_rs(v_max)
-        addy.set_ylim(l_min.value, l_max.value)
-
-        plot.xaxis.set_major_locator(plt.MaxNLocator(5))
-        # plot.xaxis.set_major_locator(plt.LinearLocator())
-        plot.xaxis.set_minor_locator(plt.MultipleLocator(1))
-        plot.xaxis.set_major_formatter(plt.FormatStrFormatter('%.0f'))
-
-        addx.xaxis.set_minor_locator(plt.MultipleLocator(0.1))
-
-        plot.set_ylabel('Radial velocity ($km/s$)')
-        plot.set_xlabel('Julian date')
-        addy.set_ylabel(r'$\delta\lambda at H\alpha (\AA)$')
-        # addx.grid(True)
-        plot.legend()
-
-    @staticmethod
-    def rv_to_rs(v_min):
-        return (v_min / const.c).to(1) * H_ALPHA
+        plot_rv_by_phase(plot, [(v1, self.name1), (v2, self.name2)], self.epoch, self.period, H_ALPHA, points=points)
