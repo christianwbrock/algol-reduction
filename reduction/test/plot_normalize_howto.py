@@ -12,9 +12,12 @@ from reduction.algol_h_alpha_line_model import AlgolHAlphaModel
 from reduction.normalize import normalize
 from reduction.constants import H_ALPHA
 from reduction.utils.ranges import closed_range
+from reduction.plotting import setup_presentation_plots
 
 
 def main():
+
+    setup_presentation_plots()
 
     padding_aa = 10.0
     box_aa = 0.5
@@ -40,14 +43,20 @@ def main():
     min_reference = find_minimum(Spectrum.from_arrays(spectrum.xs, reference_ys),
                                  disc_range.lower_bound(), disc_range.upper_bound(), box_aa)
 
+    color_spec = 'tab:blue'
+    color_ref = 'tab:orange'
+    color_diff = 'tab:green'
+    color_fit = 'tab:red'
+    color_norm = 'tab:purple'
+
     red_shift = min_spectrum - min_reference
 
     fig = plt.figure(figsize=(10, 6))
     fig.set_tight_layout(True)
 
     plot_221 = fig.add_subplot(221)
-    plot_221.plot(spectrum.xs, spectrum.ys, label='meas')
-    plot_221.plot(spectrum.xs, reference_ys, label='synth')
+    plot_221.plot(spectrum.xs, spectrum.ys, label='meas', color=color_spec)
+    plot_221.plot(spectrum.xs, reference_ys, label='synth', color=color_ref)
     plot_221.xaxis.set_major_formatter(plt.NullFormatter())
     plot_221.set_title('measured and reference spectrum')
     ylim = plot_221.get_ylim()
@@ -55,10 +64,10 @@ def main():
     reference_shifted_ys = AlgolHAlphaModel(redshift=red_shift, sigma=instrument_fwhm / 2.4)(spectrum.xs)
 
     plot_222 = fig.add_subplot(222)
-    plot_222.plot(spectrum.xs, spectrum.ys, label='meas')
-    lines = plot_222.plot(spectrum.xs, reference_ys, ':', label='synth')
+    plot_222.plot(spectrum.xs, spectrum.ys, label='meas', color=color_spec)
+    plot_222.plot(spectrum.xs, reference_ys, ':', label='synth', color=color_ref)
     plot_222.plot(spectrum.xs, reference_shifted_ys, label='synth with redshift and instrument FWHM',
-                  color=lines[0].get_color())
+                  color=color_ref)
     plot_222.xaxis.set_major_formatter(plt.NullFormatter())
     plot_222.yaxis.set_major_formatter(plt.NullFormatter())
     plot_222.set_ylim(ylim)
@@ -70,9 +79,9 @@ def main():
     norm, snr = normalize(spectrum.xs, spectrum.ys, reference_shifted_ys, polynomial_degree, continuum_ranges,
                           method=None, requested_plot=None, requested_spectra=requested_spectra)
 
-    plot_224.plot(spectrum.xs, spectrum.ys, label='meas')
-    plot_224.plot(spectrum.xs, spectrum.ys / reference_shifted_ys, label='$meas/synth$')
-    plot_224.plot(spectrum.xs, requested_spectra['fit'], label='best fit')
+    plot_224.plot(spectrum.xs, spectrum.ys, label='meas', color=color_spec)
+    plot_224.plot(spectrum.xs, spectrum.ys / reference_shifted_ys, label='$meas/synth$', color=color_diff)
+    plot_224.plot(spectrum.xs, requested_spectra['fit'], label='best fit', color=color_fit)
 
     if continuum_ranges and continuum_ranges.is_bounded():
         for r in continuum_ranges.intervals():
@@ -85,9 +94,9 @@ def main():
 
     plot_223 = fig.add_subplot(223)
 
-    plot_223.plot(spectrum.xs, spectrum.ys, label='meas',)
-    plot_223.plot(spectrum.xs, reference_shifted_ys, label='synth')
-    plot_223.plot(spectrum.xs, norm, label='normalized')
+    plot_223.plot(spectrum.xs, spectrum.ys, label='meas', color=color_spec)
+    plot_223.plot(spectrum.xs, reference_shifted_ys, label='synth', color=color_ref)
+    plot_223.plot(spectrum.xs, norm, label='normalized', color=color_norm)
 
     # if continuum_ranges and continuum_ranges.is_bounded():
     #     for r in continuum_ranges.intervals():
