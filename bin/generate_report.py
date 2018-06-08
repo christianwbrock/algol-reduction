@@ -335,7 +335,22 @@ def main():
 
     tex_file.write("\\hline\n")
     tex_file.write("\\end{longtable}\n")
+    tex_file.write("\n")
+    tex_file.write("\n")
+    tex_file.write("\\section{spectra by phase}\n")
+    tex_file.write("\n")
+    tex_file.write("\\begin{longtable}{|l|l|l|l|}\n")
+    tex_file.write("\\hline\n")
+    tex_file.write("phase & observer & date & filename \\\\\n")
+    tex_file.write("\\hline\n")
 
+    for spectrum in sorted(spectra, key=lambda sp: algol.AB.phase(sp.obs_date)):
+        tex_file.write("%.5f & %s & %s & \\seqsplit{%s}\\\\\n" %
+                       (algol.AB.phase(spectrum.obs_date), spectrum.observer.replace('_', '\\_'),
+                        spectrum.obs_date.iso[:10], spectrum.short_name.replace('_', '\\_')))
+
+    tex_file.write("\\hline\n")
+    tex_file.write("\\end{longtable}\n")
     tex_file.write("\\end{document}\n")
 
     max_file.close()
