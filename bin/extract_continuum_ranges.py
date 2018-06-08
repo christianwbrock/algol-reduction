@@ -20,7 +20,7 @@ def main():
                             parents=[verbose_parser])
     parser.add_argument('filename', metavar='spectrum', help='a spectrum file')
     parser.add_argument('--index', type=int, default=0, help='hdu in the spectrum (default=0)')
-    parser.add_argument('--xrange', nargs=2, type=float, metavar=('min', 'max'),
+    parser.add_argument('--all_range', nargs=2, type=float, metavar=('min', 'max'),
                         help="restrict extraction to this part of the spectrum")
     parser.add_argument('--ylimit', nargs=1, type=float, metavar='min', default=0.99, help='y threshold')
     norm_group = parser.add_mutually_exclusive_group()

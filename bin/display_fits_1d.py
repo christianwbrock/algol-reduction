@@ -40,7 +40,7 @@ def show_file(filename: str, normalize: bool, xrange: List[float], label: str, a
                 x = x[mask]
                 y = y[mask]
             else:
-                logger.error("ignore file %s where parameter xrange=%s is outsize data range=%s",
+                logger.error("ignore file %s where parameter all_range=%s is outsize data range=%s",
                              filename, xrange, [x[0], x[-1]])
                 return
 
@@ -84,7 +84,7 @@ def plot_many_files(args):
 def main():
     parser = ArgumentParser(description='Plot one or more spectrum files.',
                             parents=[filename_parser('spectrum'), verbose_parser])
-    parser.add_argument('--xrange', nargs=2, type=float, metavar=('min', 'max'), help='limit the plots x-range')
+    parser.add_argument('--all_range', nargs=2, type=float, metavar=('min', 'max'), help='limit the plots x-range')
     parser.add_argument('--merge', '-m', default=False, action='store_true', help='show all spectra in a single plot')
     parser.add_argument('--normalize', '-n', default=False, action='store_true',
                         help='divide all spectra by their maximum value')
