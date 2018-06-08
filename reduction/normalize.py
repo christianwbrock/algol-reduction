@@ -94,7 +94,7 @@ def _normalize_spectrum(spectrum, ref_spectrum, degree, ranges=None, non_ranges=
             if convolve_reference > 0.0:
                 ref_spectrum = convolve_with_gauss(ref_spectrum, convolve_reference)
         elif spectrum_resolution:
-            convolve_reference = 0.5 * (ref_spectrum.xmax + ref_spectrum.xmin) / spectrum_resolution
+            convolve_reference = 0.5 * (ref_spectrum.xmax + ref_spectrum.xmin) / spectrum_resolution / 2.354
             ref_spectrum = convolve_with_gauss(ref_spectrum, convolve_reference)
 
     xs = spectrum.xs
