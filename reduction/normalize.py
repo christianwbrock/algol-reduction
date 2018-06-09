@@ -213,7 +213,7 @@ def _list_to_set(lst):
     return result
 
 
-def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None, requested_spectra=None):
+def normalize(xs, ys, ref_ys, deg, continuum_ranges, method=None, requested_plot=None, requested_spectra=None):
     """
     Return a polynomial of a given degree that best fits the data points
     passed by xs and ys in the x ranges.
@@ -245,7 +245,7 @@ def normalize(xs, ys, ref_ys, deg, continuum_ranges, method, requested_plot=None
 
     Returns
     -------
-        norm, snr: tupel
+        norm, snr: array_like, shape(M,), float
             normalization result and the calculated SNR
     """
 

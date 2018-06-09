@@ -90,13 +90,13 @@ def plot_normalization():
         redshift_from_data = find_minimum(spectrum, H_ALPHA.value - 10, H_ALPHA.value + 10, 1.5) - H_ALPHA.value
         sigma = H_ALPHA / (spectrum.resolution or 15000) / 2.354
 
-        initial_model = AlgolHAlphaModel(redshift=redshift_from_data, sigma=sigma)
-        initial_model.scale.fixed = True
-        initial_model.redshift.fixed = True
-        initial_model.sigma.fixed = True
+        model = AlgolHAlphaModel(redshift=redshift_from_data, sigma=sigma)
+        model.scale.fixed = True
+        model.redshift.fixed = True
+        model.sigma.fixed = True
 
         plot = fig.add_subplot(2, 2, n)
-        normalized, snr = normalize(xs, ys, ref_ys=initial_model(xs),
+        normalized, snr = normalize(xs, ys, ref_ys=model(xs),
                                     deg=polynomial_degree, continuum_ranges=continuum_ranges,
                                     method=None, requested_plot=plot)
 
@@ -117,7 +117,8 @@ def plot_normalization():
 def plot_diff():
 
     fig = plt.figure()
-    fig.set_tight_layout(True)
+    # fig.set_tight_layout(True)
+    fig.set_tight_layout(dict(w_pad=0.1, h_pad=0.1))
 
     for n, filename_and_spectrograph in enumerate(filenames, start=1):
 
@@ -136,14 +137,14 @@ def plot_diff():
         redshift_from_data = find_minimum(spectrum, H_ALPHA.value - 10, H_ALPHA.value + 10, 1.5) - H_ALPHA.value
         sigma = H_ALPHA / (spectrum.resolution or 15000) / 2.354
 
-        initial_model = AlgolHAlphaModel(redshift=redshift_from_data, sigma=sigma)
-        initial_model.scale.fixed = True
-        initial_model.redshift.fixed = True
-        initial_model.sigma.fixed = True
+        model = AlgolHAlphaModel(redshift=redshift_from_data, sigma=sigma)
+        model.scale.fixed = True
+        model.redshift.fixed = True
+        model.sigma.fixed = True
 
         requested_spectra = {}
 
-        normalized, snr = normalize(xs, ys, ref_ys=initial_model(xs),
+        normalized, snr = normalize(xs, ys, ref_ys=model(xs),
                                     deg=polynomial_degree, continuum_ranges=continuum_ranges,
                                     method=None, requested_spectra=requested_spectra)
 
@@ -176,8 +177,70 @@ def plot_diff():
     plt.show()
 
 
+def plot_diff_error():
+
+    fig = plt.figure()
+    fig.set_tight_layout(dict(w_pad=0.1, h_pad=0.1))
+
+    filename, spectrograph = filenames[0]
+    filename = os.path.join(os.path.dirname(__file__), '..', '..', '..', filename)
+
+    spectrum = Spectrum.load(filename)
+
+    xs = spectrum.xs[[x in h_alpha_range for x in spectrum.xs]]
+    ys = spectrum.ys[[x in h_alpha_range for x in spectrum.xs]]
+
+    ys /= np.nanmax(ys)
+
+    redshift_from_data = find_minimum(spectrum, H_ALPHA.value - 10, H_ALPHA.value + 10, 1.5) - H_ALPHA.value
+    sigma = H_ALPHA / (spectrum.resolution) / 2.354
+
+    model = AlgolHAlphaModel(redshift=redshift_from_data, sigma=sigma)
+    model.scale.fixed = True
+    model.redshift.fixed = True
+    model.sigma.fixed = True
+
+    normalized_correct, snr = normalize(xs, ys, ref_ys=model(xs),
+                                deg=polynomial_degree, continuum_ranges=continuum_ranges)
+
+    for column, delta_rs in enumerate(np.linspace(-0.2, 0.2, 5)):
+        for row, delta_resol in enumerate(np.linspace(-3000, 3000, 5)):
+
+            sigma_error = H_ALPHA / (spectrum.resolution + delta_resol) / 2.354
+            model_error = AlgolHAlphaModel(redshift=redshift_from_data + delta_rs, sigma=sigma_error)
+            model_error.scale.fixed = True
+            model_error.redshift.fixed = True
+            model_error.sigma.fixed = True
+
+            normalized_error, snr = normalize(xs, ys, ref_ys=model_error(xs),
+                                        deg=polynomial_degree, continuum_ranges=continuum_ranges)
+
+            plot = fig.add_subplot(5, 5, 1 + 5 * row + column)
+
+            if column==2 and row==2:
+                plot.plot(xs, normalized_correct - model(xs), '-', color='tab:green')
+            else:
+                plot.plot(xs, normalized_correct - model(xs), ':', color='tab:green')
+                plot.plot(xs, normalized_error - model_error(xs), '-', color='tab:red', alpha=0.5)
+
+            plot.set_ylim(-0.02, 0.17)
+            plot.set_xlim(disc_range.points)
+
+            plot.yaxis.set_major_formatter(plt.NullFormatter())
+            plot.xaxis.set_major_formatter(plt.NullFormatter())
+
+            if row == 0:
+                plot.set_title('redshift\n$%+.1f \\AA$' % delta_rs)
+
+            if column == 0:
+                plot.set_ylabel('resol\n$%+2.0f$' % delta_resol)
+
+    plt.show()
+
+
 if __name__ == '__main__':
     plot_spectra(all_range)
     plot_spectra(h_alpha_range)
     plot_normalization()
     plot_diff()
+    plot_diff_error()

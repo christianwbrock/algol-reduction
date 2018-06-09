@@ -3,8 +3,8 @@ Setup common plot parameters to be used in books or presentations
 """
 
 
-def setup_presentation_plots():
-    setup_plots(fontsize=12, usetex=False, figsize=(10, 6))
+def setup_presentation_plots(fontsize=12):
+    setup_plots(fontsize=fontsize, usetex=False, figsize=(10, 6))
 
 
 def setup_text_plots():
