@@ -68,11 +68,11 @@ def plot_many_files(args):
         else:
             ax = fig.add_subplot(len(filenames), 1, i)
 
-        if args.xrange:
-            ax.set_xlim(args.xrange)
+        if args.all_range:
+            ax.set_xlim(args.all_range)
 
         label = os.path.basename(filename)
-        show_file(filename, args.normalize, args.xrange, label, ax)
+        show_file(filename, args.normalize, args.all_range, label, ax)
 
         if not args.merge and not args.no_legend:
             ax.legend()
@@ -84,7 +84,7 @@ def plot_many_files(args):
 def main():
     parser = ArgumentParser(description='Plot one or more spectrum files.',
                             parents=[filename_parser('spectrum'), verbose_parser])
-    parser.add_argument('--all_range', nargs=2, type=float, metavar=('min', 'max'), help='limit the plots x-range')
+    parser.add_argument('--all-range', nargs=2, type=float, metavar=('min', 'max'), help='limit the plots x-range')
     parser.add_argument('--merge', '-m', default=False, action='store_true', help='show all spectra in a single plot')
     parser.add_argument('--normalize', '-n', default=False, action='store_true',
                         help='divide all spectra by their maximum value')
