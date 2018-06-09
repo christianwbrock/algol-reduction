@@ -60,7 +60,9 @@ def show_time_line(star, dates_by_observer: Dict[str, List[Time]], plot: plt):
     plot.yaxis.set_major_locator(locator)
     plot.yaxis.set_major_formatter(AutoDateFormatter(locator))
 
-    plt.gcf().autofmt_xdate()
+    for label in plot.get_yticklabels():
+        label.set_va('center')
+        label.set_rotation(60)
 
     plt.grid()
 
