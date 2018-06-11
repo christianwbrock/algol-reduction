@@ -4,6 +4,25 @@
 Given a single spectrum, display all x-ranges within [0.99 y-max .. ymax]
 """
 
+import os
+import os.path
+from collections import namedtuple, defaultdict
+from argparse import ArgumentParser
+import logging
+
+import numpy as np
+
+from matplotlib import pyplot as plt
+from matplotlib import cm
+from matplotlib import rcParams as plot_params
+
+from astropy import constants as const
+from astropy import units as u
+from astropy.coordinates import EarthLocation
+from astropy.convolution import Box1DKernel
+from astropy.convolution import convolve
+from astropy.modeling.fitting import SimplexLSQFitter
+
 from reduction.commandline import poly_glob, filename_parser, verbose_parser, get_loglevel
 from reduction.algol_h_alpha_line_model import AlgolHAlphaModel
 from reduction.spectrum import Spectrum
@@ -12,30 +31,8 @@ from reduction.constants import H_ALPHA
 from reduction.normalize import normalize
 from reduction.utils.ranges import closed_range
 
-from astropy import constants as const
-from astropy import units as u
-from astropy.coordinates import EarthLocation
-
-from astropy.convolution import Box1DKernel
-from astropy.convolution import convolve
-
-from astropy.modeling.fitting import SimplexLSQFitter
 from reduction.nan_statistics import nan_leastsquare
 
-from argparse import ArgumentParser
-
-from matplotlib import pyplot as plt
-from matplotlib import cm
-from matplotlib import rcParams as plot_params
-
-import numpy as np
-
-import os
-import os.path
-
-from collections import namedtuple
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +105,7 @@ def main():
     diff_image_wm_name = "diff_by_phase_with_maxima.png"
     sorted_diff_image_name = "diff_sorted_phase.png"
     sorted_diff_image_wm_name = "diff_sorted_phase_with_maxima.png"
+    snr_by_observer_name = "snr_by_observer.png"
 
     tex_file.write("\n")
     tex_file.write("\\section{Final Result}\n")
@@ -123,6 +121,7 @@ def main():
 
     # list of Diffs
     diffs_by_phase = []
+    snr_by_observer = defaultdict(list)
 
     filenames = poly_glob(args.filenames)
 
@@ -234,6 +233,8 @@ def main():
         maxima = _find_maxima(diff_xs, diff_ys, H_ALPHA.value)
 
         diffs_by_phase.append(Diff(diff_xs, diff_ys, phase, maxima))
+        if spectrum.resolution:
+            snr_by_observer[spectrum.observer].append([spectrum.resolution, snr])
 
         create_diff_plot(final_model, initial_model, normalized, maxima, spectrum.short_name, xlim, xs, ys,
                          os.path.join(args.output, image_diff))
@@ -292,9 +293,15 @@ def main():
     plot_sorted_diff(args.cmap, args.output, sorted_diff_image_name, diffs_by_phase, disc_range, vmin, vmax, False)
     plot_sorted_diff(args.cmap, args.output, sorted_diff_image_wm_name, diffs_by_phase, disc_range, vmin, vmax, True)
 
+    plot_snr_by_observer(args.output, snr_by_observer_name, snr_by_observer)
+
     max_file = open(os.path.join(args.output, "maxima.dat"), "w")
 
     tex_file.write("\\appendix\n")
+    tex_file.write("\\section{SNRs and Resolutions}\n")
+    tex_file.write("\n")
+    tex_file.write("\\includegraphics[width=\\textwidth]{%s}\n" % snr_by_observer_name)
+    tex_file.write("\n")
     tex_file.write("\\section{maxima of differences}\n")
     tex_file.write("\n")
     tex_file.write("The raw date is stored in {\\tt %s}\n" % "maxima.dat")
@@ -400,6 +407,26 @@ def plot_sorted_diff(args_cmap, args_output, sorted_diff_image_name, diffs_by_ph
     fig.colorbar(sc)
     plt.savefig(os.path.join(args_output, sorted_diff_image_name))
     plt.close()
+
+
+def plot_snr_by_observer(args_output, filename, snr_by_observer):
+
+    assert isinstance(filename, str)
+    assert isinstance(snr_by_observer, dict)
+
+    fig = plt.figure()
+    plot = fig.add_subplot(111)
+    plot.set_xlabel('Resolution $\lambda / \delta \lambda$')
+    plot.set_ylabel('SNR')
+
+    for observer, resolutions_and_snrs in sorted(snr_by_observer.items()):
+        resolutions = [i[0] for i in resolutions_and_snrs]
+        snrs = [i[1] for i in resolutions_and_snrs]
+        plot.scatter(resolutions, snrs, label=observer)
+
+    plot.legend()
+    plt.savefig(os.path.join(args_output, filename))
+    plt.close(os.path.join(args_output, filename))
 
 
 def plot_diff(args_cmap, args_output, diff_image_name, diffs_by_phase, disc_range, vmin, vmax, plot_maxima):
