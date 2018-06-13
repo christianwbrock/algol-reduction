@@ -2,6 +2,7 @@
 Plot the radial velocity of Algol AB and C components
 """
 
+import astropy.constants as const
 import astropy.units as u
 import matplotlib.pyplot as plt
 from astropy.coordinates import EarthLocation
@@ -9,8 +10,8 @@ from astropy.time import Time
 
 from reduction.constants import H_ALPHA
 from reduction.plot_radial_velocity import plot_rv_by_phase
-from reduction.stars.algol import Algol, algol_coordinate
 from reduction.plotting import setup_presentation_plots
+from reduction.stars.algol import Algol, algol_coordinate
 
 setup_presentation_plots()
 
@@ -50,11 +51,16 @@ def plot_algol_orbits():
     sum_period = max(algol.AB.period, algol.AB_C.period, one_year)
 
     plt_sum = fig.add_subplot(4, 1, 4)
-    plt_sum.set_title('sum above + $%.1f \\AA$, duration=%.1f %s'%(algol.rv.value, sum_period.value, sum_period.unit))
+    plt_sum.set_title('sum above + $%.2f \\AA$, duration=%.1f %s'%(_rf_to_rs(algol.rv, H_ALPHA).value,
+                                                                   sum_period.value, sum_period.unit))
     plot_rv_by_phase(plt_sum, [[sum_a, 'AlgolA']], now, sum_period, H_ALPHA,
                      show_xaxis=True, points=2001, rv_label='km/s', rs_label='$\\AA$')
 
     plt.show()
+
+
+def _rf_to_rs(rv, ref_wavelength):
+    return (rv / const.c).to(1) * ref_wavelength
 
 
 if __name__ == '__main__':
