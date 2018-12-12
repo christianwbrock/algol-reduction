@@ -91,7 +91,7 @@ class Spectrum:
             return cls.load_from_dat(filename)
 
     @classmethod
-    def load_from_dat(cls, filename, wavelength_column=0, intensity_column=1, remove_zeros=True):
+    def load_from_dat(cls, filename, wavelength_column=0, intensity_column=1, remove_zeros=True, guess_units=True):
         """load spectrum from dat file using numpy.loadtxt()
 
         Parameters
@@ -107,8 +107,14 @@ class Spectrum:
 
         remove_zeros : bool
             Any leading or trailing zero intensities are removed.
+
+        guess_units : bool
+            If values are in 1000-9999 we assume A, below 1000 nanometer.
         """
-        data = np.loadtxt(filename)
+        try:
+            data = np.loadtxt(filename)
+        except ValueError:
+            data = np.loadtxt(filename, skiprows=1)
 
         if not data.ndim == 2:
             raise ValueError('file "%s" contains no 2d-table.' % filename)
@@ -137,10 +143,17 @@ class Spectrum:
         xs = data[begin:end, wavelength_column]
         ys = data[begin:end, intensity_column]
 
-        return cls.from_arrays(xs, ys, filename)
+        unit = None
+        if guess_units:
+            if np.nanmax(xs) < 1000:
+                unit = u.nm
+            elif 1000 <= np.nanmin(xs) and np.nanmax(xs) <= 9999:
+                unit = u.AA
+
+        return cls.from_arrays(xs, ys, filename, unit)
 
     @staticmethod
-    def from_arrays(xs, ys, filename=None):
+    def from_arrays(xs, ys, filename=None, unit=None):
         """
         Create spectrum from two arrays
 
@@ -151,6 +164,12 @@ class Spectrum:
 
         ys : array_like
             the intensity values, one for each wavelength value
+
+        filename : str
+            passed to Spectrum
+
+        unit :
+            usually nm, AA or None; passed to Spectrum
         """
 
         if not len(xs) == len(ys):
@@ -164,7 +183,7 @@ class Spectrum:
         if not 0.001 * dx > np.max(np.diff(xs)) - np.min(np.diff(xs)):
             raise ValueError("xs are not equidistant")
 
-        return Spectrum(x0, dx, nx, ys, filename=filename)
+        return Spectrum(x0, dx, nx, ys, filename=filename, unit=unit)
 
     @classmethod
     def load_from_fit(cls, filename, indices=slice(1)):
