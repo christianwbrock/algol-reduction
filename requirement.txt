@@ -1,9 +1,0 @@
-# use with: pip3 install -r requirement.txt
-
-matplotlib
-numpy
-scipy
-astropy
-astroplan
-icalendar
-

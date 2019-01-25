@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 """
 Given a single spectrum, display all x-ranges within [0.99 y-max .. ymax]

@@ -1,3 +1,4 @@
+#!python
 # -*- coding: utf-8 -*-
 """
 For a periodic star we want to schedule observations for a given time period.
@@ -34,12 +35,12 @@ def create_shedule(filename=None):
     # target_name = 'Mizar'
 
     # from reduction.observers import christian, v, filipe
-    from reduction.observers import ulrich as location
-    target_name += '_Marzahn'
+    from reduction.observers import bernd as location
+    target_name += '_Cunnersdorf'
 
-    phases = None
+    # phases = None
     # phases = [0.0]
-    # phases = [0.0, 0.2]
+    phases = [0.52, 0.59]
 
     start_time = Time.now()
     end_time = Time.now() + 366 * u.day

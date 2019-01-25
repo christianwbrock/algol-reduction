@@ -1,3 +1,5 @@
+#!python
+# -*- coding: utf-8 -*-
 """
 Plot elevation and azimuth or a star for a given time range, e.g. an observation night.
 
