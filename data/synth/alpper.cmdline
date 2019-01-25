@@ -1,0 +1,13 @@
+-v
+-v
+--degree
+5
+--center-minimum
+6553
+6573
+1.5
+-C
+6553
+6573
+-r
+/home/guest/Documents/Astro/projects/reduction/data/synth/spectrum_6350.0_1.9_-0.02_0.0.txt
