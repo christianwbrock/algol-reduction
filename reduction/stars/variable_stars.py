@@ -6,17 +6,15 @@ and store them in fits files having observer and date-obs header fields
 we want to know what phases we have covered.
 """
 
-import numpy as np
-
-from astropy.time import Time
-from astropy.coordinates import SkyCoord
-from astropy.coordinates import EarthLocation
+import logging
+import math
+import warnings
 
 import astropy.units as u
-
-import math
-
-import logging
+import numpy as np
+from astropy.coordinates import EarthLocation
+from astropy.coordinates import SkyCoord
+from astropy.time import Time
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +52,13 @@ class VariableObject(object):
         Due to the rotation around the sun, light from the target reaches earth sooner or later in a given six month
         period. Subclasses may be modify/disable this light_travel_time correction by overriding this method.
         """
-        observer_location = (observer_location or
-                             observation_time.location or
-                             EarthLocation.from_geocentric(0, 0, 0, u.meter))
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            observer_location = (observer_location or
+                                 observation_time.location or
+                                 EarthLocation.from_geocentric(0, 0, 0, u.meter))
 
         return observation_time.light_travel_time(sky_coordinate, kind='barycentric', location=observer_location)
 
@@ -118,7 +120,6 @@ class RegularVariableObject(VariableObject):
     :param assume_radial_velocity_correction: assume that epoch is radial velocite corrected
     """
 
-    @u.quantity_input(period=u.day)
     def __init__(self, epoch, period, authority=None, coordinate=None,
                  assume_radial_velocity_correction=True, location=None):
         super().__init__(authority, coordinate)

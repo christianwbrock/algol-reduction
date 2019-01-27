@@ -4,78 +4,60 @@
 For a periodic star we want to schedule observations for a given time period.
 """
 
-import sys
+import logging
 import os.path
+from argparse import ArgumentParser
 from collections import namedtuple
+from datetime import datetime, timezone
 
-import numpy as np
-
-from astropy.time import Time
-from astropy.coordinates import EarthLocation, Latitude, Longitude
 import astropy.units as u
-
+import numpy as np
 from astroplan import Observer, MAGIC_TIME
-
+from astropy.coordinates import EarthLocation, SkyCoord
+from astropy.time import Time
 from icalendar import Calendar, Event
 
-import logging
-logger = logging.getLogger(__name__)
+from reduction.commandline import time_parser, get_time_from_args, time_delta_parser, get_time_delta_from_args
+from reduction.commandline import verbose_parser, get_loglevel
+from reduction.stars.variable_stars import RegularVariableObject
+
+logger = logging.getLogger(os.path.basename(__file__))
 
 
-def create_shedule(filename=None):
-
-    # from reduction.stars.delcep import delcep_GCVS as target
-    # from reduction.stars.delcep import josi as target
-    # target_name = 'Delta Cephei'
-
-    from reduction.stars.algol import unknown as target
-    target_name = 'Algol'
-
-    # from reduction.stars.mizar import mizar as target
-    # target_name = 'Mizar'
-
-    # from reduction.observers import christian, v, filipe
-    from reduction.observers import bernd as location
-    target_name += '_Cunnersdorf'
-
-    # phases = None
-    # phases = [0.0]
-    phases = [0.52, 0.59]
-
-    start_time = Time.now()
-    end_time = Time.now() + 366 * u.day
-
-    # do not change below ---------------
-
-    filename = filename or os.path.abspath(os.path.relpath(
-        target_name.lower().replace(' ', '', -1) + '.ics'))
-
+def _create_schedule(filename, start_time, end_time, target_name, target, location, sun_horizon, star_horizon, phases,
+                     epoch, period):
     observer = Observer(name="", location=location)
 
     logger.info("Time: %s -> %s", start_time, end_time)
     logger.info("Observer: %s", observer)
     logger.info("Star: %s", target)
 
-    nights = get_nights(observer, start_time, end_time)
+    nights = _get_nights(observer, start_time, end_time, sun_horizon)
 
-    time_above = get_time_above_horizon(observer, start_time, end_time, target.coordinate)
+    time_above = _get_time_above_horizon(observer, start_time, end_time, target, star_horizon)
 
-    obs_times = intersection(nights, time_above)
+    obs_times = _intersection(nights, time_above)
 
-    if phases:
-        phase_times = get_phases(phases, start_time, end_time, target)
-        obs_times = intersection(obs_times, phase_times)
+    if epoch and period:
+        variable_star = RegularVariableObject(epoch, period, coordinate=target, location=location)
+    else:
+        variable_star = None
 
-    observations = calculate_schedule(observer, obs_times, target)
-    if filename:
-        display_ical(filename, observer, observations, target_name)
+    if phases and variable_star:
+        phase_times = _get_phases(phases, start_time, end_time, variable_star)
+        obs_times = _intersection(obs_times, phase_times)
+
+    observations = _calculate_schedule(observer, obs_times, target, variable_star)
+
+    _display_schedule(observations)
+
+    _display_ical(filename, observer, observations, target_name)
 
 
 @u.quantity_input(horizon=u.degree)
-def get_nights(observer, start_time, end_time, horizon=-12*u.degree):
+def _get_nights(observer, start_time, end_time, horizon):
+    logger.info("Calculate nights with sun below %s" % horizon)
 
-    logger.info("Calculate nights")
-    
     if observer.is_night(start_time, horizon=horizon):
         dusk = start_time
     else:
@@ -92,7 +74,7 @@ def get_nights(observer, start_time, end_time, horizon=-12*u.degree):
     while dawn < end_time:
         dusk = observer.sun_set_time(dawn, which='next', horizon=horizon)
         dawn = observer.sun_rise_time(dusk, which='next', horizon=horizon)
-    
+
         nights.append([dusk, dawn])
 
     logger.info("Sun sets %d times below %s between %s and %s", len(nights), horizon, start_time.iso, end_time.iso)
@@ -102,9 +84,8 @@ def get_nights(observer, start_time, end_time, horizon=-12*u.degree):
 
 
 @u.quantity_input(time_range=u.day, horizon=u.degree)
-def get_time_above_horizon(observer, start_time, end_time, target_coordinate, horizon=+30*u.degree):
-    
-    logger.info("Calculate target time above horizon.")
+def _get_time_above_horizon(observer, start_time, end_time, target_coordinate, horizon):
+    logger.info("Calculate target time above %s" % horizon)
 
     target_is_up = observer.target_is_up(start_time, target_coordinate, horizon=horizon)
     if target_is_up:
@@ -123,12 +104,12 @@ def get_time_above_horizon(observer, start_time, end_time, target_coordinate, ho
     while dawn < end_time:
         dusk = observer.target_rise_time(dawn, target_coordinate, which='next', horizon=horizon)
         dawn = observer.target_set_time(dusk, target_coordinate, which='next', horizon=horizon)
-    
+
         if dusk == MAGIC_TIME or dawn == MAGIC_TIME:
             break
 
         nights.append([dusk, dawn])
-    
+
     logger.info("Star rises %d times above %s between %s and %s", len(nights), horizon, start_time.iso, end_time.iso)
     logger.debug("at %s", nights)
 
@@ -136,8 +117,7 @@ def get_time_above_horizon(observer, start_time, end_time, target_coordinate, ho
 
 
 @u.quantity_input(time_range=u.day)
-def get_phases(phase, start_time, end_time, variable_star):
-    
+def _get_phases(phase, start_time, end_time, variable_star):
     logger.info("Calculate observation phases.")
 
     if not isinstance(start_time, Time):
@@ -145,16 +125,16 @@ def get_phases(phase, start_time, end_time, variable_star):
 
     if not isinstance(end_time, Time):
         end_time = Time(end_time)
-        
+
     assert isinstance(phase, list)
-    
+
     result = []
 
     if isinstance(phase[0], list):
-        
+
         for ph in phase:
-            result += get_phases(ph, start_time, end_time, variable_star.epoch, variable_star.period)
-            
+            result += _get_phases(ph, start_time, end_time, variable_star)
+
     else:
 
         if isinstance(phase, (int, float)):
@@ -175,16 +155,16 @@ def get_phases(phase, start_time, end_time, variable_star):
 
         first = variable_star.period_at(start_time)
         last = variable_star.period_at(end_time)
-        
+
         for i in range(first, last + 1):
             start = variable_star.to_time(i + phase_0)
             end = variable_star.to_time(i + phase_1)
-            
+
             result.append([start, end])
 
-    logger.info("There are %d phases between [%.2f .. %.2f] between %s and %s", len(result), phase_0, phase_1,
-                start_time.iso, end_time.iso)
-    logger.debug("at %s", result)
+        logger.info("There are %d phases between [%.2f .. %.2f] between %s and %s", len(result), phase_0, phase_1,
+                    start_time.iso, end_time.iso)
+        logger.debug("at %s", result)
 
     return result
 
@@ -192,31 +172,30 @@ def get_phases(phase, start_time, end_time, variable_star):
 def _single_intersection(r0, r1):
     assert len(r0) == 2
     assert len(r1) == 2
-    
+
     assert isinstance(r0[0], Time)
     assert isinstance(r0[1], Time)
     assert isinstance(r1[0], Time)
     assert isinstance(r1[1], Time)
-    
+
     start = max(r0[0], r1[0])
     end = min(r0[1], r1[1])
-    
+
     if start <= end:
         return [start, end]
-    
+
     else:
         return None
-    
 
-def intersection(list0, list1):
 
+def _intersection(list0, list1):
     result = []
     for r0 in list0:
         for r1 in list1:
             inters = _single_intersection(r0, r1)
             if inters:
                 result.append(inters)
-    
+
     return result
 
 
@@ -240,32 +219,31 @@ def _az_string(az):
     assert len(compass) == 16
 
     step = 360 / len(compass)
-    
+
     idx = int(round(az / step)) % len(compass)
     assert 0 <= idx < len(compass)
-    
+
     return compass[idx]
 
 
 def _altaz(observer, coordinate, t0, t1, num=10):
-    
     times = np.linspace(t0.jd, t1.jd, num=num)
-    
+
     altaz_coord = [observer.altaz(Time(t, format='jd'), coordinate) for t in times]
     alt = np.asarray([coord.alt.to(u.deg).value for coord in altaz_coord])
     alt = np.asarray(np.round(alt), dtype=int)
 
     # determine first, last min and max position
-    idx = {0, len(alt)-1}
+    idx = {0, len(alt) - 1}
     idx.add(np.argmin(alt))
     idx.add(np.argmax(alt))
     assert 2 <= len(idx) <= 4
-    
+
     alt = alt[sorted(idx)]
     assert 2 <= len(alt) <= 4
-    
+
     alt = [str(a) for a in alt]
-    
+
     az0 = _az_string(altaz_coord[0].az.to(u.deg).value)
     az1 = _az_string(altaz_coord[1].az.to(u.deg).value)
 
@@ -278,8 +256,7 @@ def _altaz(observer, coordinate, t0, t1, num=10):
 Observation = namedtuple('Observation', 'nbr ph0 ph1 t0 t1 comment')
 
 
-def calculate_schedule(observer, obs_times, target):
-
+def _calculate_schedule(observer, obs_times, target, variable_star):
     result = []
 
     for i, obs in enumerate(obs_times):
@@ -289,52 +266,129 @@ def calculate_schedule(observer, obs_times, target):
         assert isinstance(t0, Time)
         assert isinstance(t1, Time)
 
-        ph0 = target.phase_at(t0, location=observer.location)
-        ph1 = target.phase_at(t1, location=observer.location)
+        comment = _altaz(observer, target, t0, t1)
 
-        comment = _altaz(observer, target.coordinate, t0, t1)
-
-        logger.info("%2d: %.2f .. %.2f: %s .. %s   %s", i, ph0, ph1, t0.iso[0:16], t1.iso[11:16], comment)
+        if variable_star:
+            ph0 = variable_star.phase_at(t0, location=observer.location)
+            ph1 = variable_star.phase_at(t1, location=observer.location)
+        else:
+            ph0 = ph1 = None
 
         result.append(Observation(i, ph0, ph1, t0, t1, comment))
 
     return result
 
 
-def display_schedule(observations):
+def _display_schedule(observations):
     for obs in observations:
         assert isinstance(obs, Observation)
-        logger.info("%2d: %.2f .. %.2f: %s .. %s   %s",
-                    obs.nbr, obs.ph0, obs.ph1, obs.t0.iso[0:16], obs.t1.iso[11:16], obs.comment)
-    
+        if obs.ph0 and obs.ph1:
+            logger.info("%2d: %.2f .. %.2f: %s .. %s   %s",
+                        obs.nbr, obs.ph0, obs.ph1, obs.t0.iso[0:16], obs.t1.iso[11:16], obs.comment)
+        else:
+            logger.info("%2d: %s .. %s   %s",
+                        obs.nbr, obs.t0.iso[0:16], obs.t1.iso[11:16], obs.comment)
+
 
 @u.quantity_input(period=u.day)
-def display_ical(filename, observer, observations, target_name):
-
+def _display_ical(filename, observer, observations, target_name):
     logger.info('Write to \'%s\'', filename)
-    
+
     cal = Calendar()
     cal['summary'] = target_name
-    
+
     for obs in observations:
         event = Event()
         event.add('DTSTART', obs.t0.to_datetime(observer.timezone))
         event.add('DTEND', obs.t1.to_datetime(observer.timezone))
-        event.add('SUMMARY', "%s Phase %.2f .. %.2f" % (target_name, obs.ph0, obs.ph1))
+        comment = "%s Phase %.2f .. %.2f" % (target_name, obs.ph0, obs.ph1) if obs.ph0 and obs.ph1 else target_name
+        event.add('SUMMARY', comment)
         event.add('DESCRIPTION', obs.comment)
-        
+
         cal.add_component(event)
-    
+
     with open(filename, 'wb') as file:
         file.write(cal.to_ical())
 
 
 def main():
-    logging.basicConfig(level=logging.INFO)
-    filename = sys.argv[1] if len(sys.argv) > 1 else None
-    create_shedule(filename)
+    # todo make time zone aware?
+    local_timezone = datetime.now(timezone.utc).astimezone().tzinfo
+    noon = datetime.now(tz=local_timezone).replace(hour=12, minute=0, second=0, microsecond=0)
+    noon = Time(noon)
+
+    from reduction.stars.algol import unknown as target
+
+    parser = ArgumentParser(parents=[verbose_parser, time_parser('start', default=noon.isot),
+                                     time_parser('end', default=(noon + 366 * u.day).isot),
+                                     time_parser('epoch', default=target.epoch.isot),
+                                     time_delta_parser('period', default='2.8673285')],
+                            fromfile_prefix_chars='@',
+                            description='Plan observations for a possibly variable star.')
+
+    parser.add_argument('-o', '--output', type=str, default='output.ics',
+                        help='output file name (default: %(default)s)')
+    parser.add_argument('--entry-prefix', type=str, metavar='str',
+                        help='Begin of each calendar entry (default: target name or sky coordinates)')
+    sky_coord = parser.add_mutually_exclusive_group()
+    sky_coord.add_argument('--target-name', type=str, metavar='str',
+                           help='Try to load target coordinate using name, e.g. Algol, DelCep or M42')
+    sky_coord.add_argument('--sky-coord', type=str, nargs=2, metavar=('ra', 'dec'),
+                           default=('3h9m26.3s', '+41d1m40.8s'),
+                           help='Sky coordinates of target (default: Algol at %(default)s)')
+    earth_coord = parser.add_mutually_exclusive_group()
+    earth_coord.add_argument('--observatory', type=str, metavar='name',
+                             help='Try to load observer location using observatory name')
+    earth_coord.add_argument('--address', type=str, metavar='str',
+                             help='Try to load observer location using this address string (astropy>=3.1.1)')
+    earth_coord.add_argument('--earth-coord', type=str, nargs=2, metavar=('long', 'lat'), default=('+13.0', '51.0'),
+                             help='Earth coordinates of observer (default: %(default)s)')
+    parser.add_argument('--phase', dest='phases', nargs=2, type=float, metavar=('min', 'max'), action='append',
+                        help='Desired phase of the variable star. '
+                             'If absent, all phases are shown. '
+                             'This option can be used more than once.')
+    parser.add_argument('--sun-below', metavar='deg', default=12, type=float,
+                        help='Nights are whenever the sun is below the horizon further then this value '
+                             '(default: %(default)s)')
+    parser.add_argument('--star-above', metavar='deg', default=30, type=float,
+                        help='Observation are scheduled when the star is above the horizon further then this value '
+                             '(default: %(default)s)')
+
+    args = parser.parse_args()
+    logging.basicConfig(level=get_loglevel(logging.INFO, args))
+
+    start_time = get_time_from_args(args, 'start')
+    end_time = get_time_from_args(args, 'end')
+
+    phases = args.phases
+    epoch = get_time_from_args(args, 'epoch', required=False)
+    period = get_time_delta_from_args(args, 'period', required=bool(epoch))
+
+    assert epoch and period or not epoch and not period
+
+    if args.target_name:
+        target = SkyCoord.from_name(args.target_name)
+    else:
+        assert args.sky_coord
+        target = SkyCoord(*args.sky_coord)
+
+    star_name = args.entry_prefix or args.target_name or "ra=%s dec=%s" % (target.frame.ra, target.frame.dec)
+
+    if args.observatory:
+        location = EarthLocation.of_site(args.observatory)
+    elif args.address:
+        location = EarthLocation.of_address(args.address)
+    else:
+        assert args.earth_coord
+        location = EarthLocation(*args.earth_coord)
+
+    sun_horizon = -1 * args.sun_below * u.degree
+    star_horizon = +1 * args.star_above * u.degree
+    filename = args.output
+
+    _create_schedule(filename, start_time, end_time, star_name, target, location, sun_horizon, star_horizon, phases,
+                     epoch, period)
 
 
 if __name__ == '__main__':
     main()
-

@@ -85,60 +85,133 @@ def poly_glob(filenames_or_patterns, *, recursive=True, ignore_case=True):
 
 
 # --------- arguments passed to astropy Time -----
-def time_parser(prefix):
+def time_parser(prefix, description=None, default=None):
+    """
+    Some times one wants to ask the user for a time.
+
+    As the astropy.Time can usually not be constructed from a single string and as it has no default argument parser ...
+
+    :param prefix: prefix for the arguments
+    :param description: Is shown as argument group description
+    :param default: for the first parameter
+    :return: an argument parser
+    """
     from astropy.time import Time
 
+    description = description or "Arguments to create the %s from astropy.time.Time()" % prefix
+
     res = ArgumentParser(add_help=False)
-    excl_group = res.add_mutually_exclusive_group()
-    value_group = excl_group.add_argument_group()
-    value_group.add_argument('--' + prefix, help='passed as first parameter to atropy.time.Time()')
-    value_group.add_argument('--' + prefix + '-val2', help='passed as second parameter to atropy.time.Time()')
-    value_group.add_argument('--' + prefix + '-format', choices=Time.FORMATS,
-                             help='passed as format parameter to atropy.time.Time()')
-    excl_group.add_argument('--' + prefix + '-jd', type=int, help='time in JD format')
-    excl_group.add_argument('--' + prefix + '-mjd', type=int, help='time in MJD format')
+    value_group = res.add_argument_group(description=description)
+    value_group.add_argument('--' + prefix, default=default, metavar='val1',
+                             help='(default: %(default)s)' if default else None)
+    value_group.add_argument('--' + prefix + '-val2', metavar='val2')
+    value_group.add_argument('--' + prefix + '-format', metavar='format',
+                             help='one of %s or guessed from val1' % ", ".join(Time.FORMATS.keys()))
+    value_group.add_argument('--' + prefix + '-scale', default='utc', metavar='scale',
+                             help='one of %s. (default: %%(default)s)' % ", ".join(Time.SCALES))
+
+    return res
+
+
+def time_delta_parser(prefix, description=None, default=None, format_default='jd'):
+    """
+    Some times one wants to ask the user for a time interval.
+
+    astropy.TimeDelta can usually not be constructed from a single string but it has no default argument parser ...
+
+    :param prefix: prefix for the arguments
+    :param description: Is shown as argument group description
+    :param default: for the first parameter
+    :return: an argument parser
+    """
+    from astropy.time import TimeDelta
+
+    description = description or "Arguments to create the %s from astropy.time.TimeDelta()" % prefix
+
+    res = ArgumentParser(add_help=False)
+    value_group = res.add_argument_group(description=description)
+    value_group.add_argument('--' + prefix, default=default, type=float, metavar='val1',
+                             help='(default: %(default)s)' if default else None)
+    value_group.add_argument('--' + prefix + '-val2', metavar='val2')
+    value_group.add_argument('--' + prefix + '-format', metavar='format', default=format_default,
+                             help='%s (default: %%(default)s)' % " or ".join(TimeDelta.FORMATS.keys()))
+    value_group.add_argument('--' + prefix + '-scale',
+                             help='one of %s or None.' % ", ".join(TimeDelta.SCALES))
 
     return res
 
 
 def get_time_from_args(args, prefix, required=True):
+    """
+    Create an astropy.time.Time value from argument crated via time_parser.
+
+    :param args: The argument parser result
+    :param prefix: the argument used.
+    :param required:  Was this argument required?
+    :return: An astropy.time.Time value
+    """
     from astropy.time import Time
 
     prefix = prefix.replace('-', '_', -1)
 
-    jd_name = prefix + '_jd'
-    mjd_name = prefix + '_mjd'
     val_name = prefix
     val2_name = prefix + '_val2'
     format_name = prefix + '_format'
+    scale_name = prefix + '_scale'
 
-    jd = getattr(args, jd_name)
-    mjd = getattr(args, mjd_name)
     val = getattr(args, prefix)
     val2 = getattr(args, val2_name)
     format_ = getattr(args, format_name)
+    scale = getattr(args, scale_name)
 
-    if required and not (jd or mjd or val):
-        raise SystemExit("missing argument %s, %s  or %s" % (val_name, jd_name, mjd_name))
+    # some formats , e.g. jd have problems with strings
+    try:
+        val = float(val)
+    except:
+        pass
 
-    def raise_if_both(param1, param2, name1, name2):
-        if param1 and param2:
-            raise SystemExit("argument %s not allowed with argument %s" % (name1, name2))
-
-    raise_if_both(jd, mjd, jd_name, mjd_name)
-    raise_if_both(jd, val, jd_name, val_name)
-    raise_if_both(mjd, val, mjd_name, val_name)
+    if required and not val:
+        raise SystemExit("missing argument %s" % val_name)
 
     if (val2 or format_) and not val:
         raise SystemExit("%s or %s cannot be used without %s" % (val2_name, format_name, val_name))
 
-    if jd:
-        return Time(jd, format='jd')
+    if val:
+        return Time(val, val2, format=format_, scale=scale)
 
-    elif mjd:
-        return Time(mjd, format='mjd')
+    return None
 
-    elif val:
-        return Time(val, val2, format=format_)
+
+def get_time_delta_from_args(args, prefix, required=True):
+    """
+    Create an astropy.time.TimeDelta value from argument crated via time_delta_parser.
+
+    :param args: The argument parser result
+    :param prefix: the argument used.
+    :param required:  Was this argument required?
+    :return: An astropy.time.TimeDelta value
+    """
+    from astropy.time import TimeDelta
+
+    prefix = prefix.replace('-', '_', -1)
+
+    val_name = prefix
+    val2_name = prefix + '_val2'
+    format_name = prefix + '_format'
+    scale_name = prefix + '_scale'
+
+    val = getattr(args, prefix)
+    val2 = getattr(args, val2_name)
+    format_ = getattr(args, format_name)
+    scale = getattr(args, scale_name)
+
+    if required and not val:
+        raise SystemExit("missing argument %s" % val_name)
+
+    if (val2 or format_) and not val:
+        raise SystemExit("%s or %s cannot be used without %s" % (val2_name, format_name, val_name))
+
+    if val:
+        return TimeDelta(val, val2, format=format_, scale=scale)
 
     return None
