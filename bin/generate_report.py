@@ -60,7 +60,7 @@ def main():
     parser.add_argument('--fit-redshift', action='store_true',
                         help='Modify model redshift to best fit data')
 
-    parser.add_argument('--deg', type=int, default=5,
+    parser.add_argument('--deg', type=int, default=3,
                         help='Degree of the normalization polynomial (default: %(default)s)')
 
     parser.add_argument('--cmap', default='bwr',
@@ -167,8 +167,10 @@ def main():
         obs_time = spectrum.obs_date
         res = spectrum.resolution
 
+        # compute obs_time at solar system center
         light_travel_time = obs_time.light_travel_time(algol_coordinate, location=observer_location)
-        obs_time -= light_travel_time
+        obs_time += light_travel_time
+
         algol_rv_a = algol.rv_A(obs_time)
         radial_velocity_correction = algol_coordinate.radial_velocity_correction(obstime=obs_time,
                                                                                  location=observer_location)
