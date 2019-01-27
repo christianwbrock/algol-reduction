@@ -325,6 +325,8 @@ def main():
             else:
                 x1, y1 = None, None
                 x2, y2 = x, y
+        else:  # happens if both maxima are at the border
+            continue
 
         v1 = ((x1 - H_ALPHA.value) / H_ALPHA.value * const.c).to('km/s').value if x1 else None
         v2 = ((x2 - H_ALPHA.value) / H_ALPHA.value * const.c).to('km/s').value if x2 else None
