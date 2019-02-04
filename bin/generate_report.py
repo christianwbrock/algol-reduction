@@ -189,8 +189,11 @@ def main():
         initial_model.redshift.fixed = not args.fit_redshift
         initial_model.sigma.fixed = not args.fit_sigma
 
-        normalized, snr = normalize(xs, ys, ref_ys=initial_model(xs), deg=args.deg, continuum_ranges=continuum_ranges,
-                                    method=None, requested_plot=plt.figure().add_subplot(111))
+        normalization = normalize(xs, ys, ref_ys=initial_model(xs), degree_or_range=args.deg, continuum_ranges=continuum_ranges)
+
+        normalized = normalization.norm
+        snr = normalization.snr
+        normalization.plot(plt.figure().add_subplot(111))
 
         image_norm1 = "%05d_norm1.png" % n
         plt.title("Normalization: %s" % initial_model)
@@ -207,8 +210,11 @@ def main():
 
             logger.debug("fit info: %s", fitter.fit_info)
 
-            normalized, snr = normalize(xs, ys, ref_ys=final_model(xs), deg=args.deg, continuum_ranges=continuum_ranges,
-                                        method=None, requested_plot=plt.figure().add_subplot(111))
+            normalization = normalize(xs, ys, ref_ys=final_model(xs), degree_or_range=args.deg, continuum_ranges=continuum_ranges)
+
+            normalized = normalization.norm
+            snr = normalization.snr
+            normalization.plot(plt.figure().add_subplot(111))
 
             image_norm2 = "%05d_norm2.png" % n
             plt.title("Normalization: %s" % final_model)

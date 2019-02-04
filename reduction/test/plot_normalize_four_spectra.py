@@ -28,7 +28,7 @@ filenames = [
 padding_aa = 10.0
 box_aa = 0.5
 
-polynomial_degree = 7
+polynomial_degree = range(2, 11)
 
 all_range = closed_range(6400, 6700)
 disc_range = closed_range(H_ALPHA.value - padding_aa, H_ALPHA.value + padding_aa)
@@ -96,10 +96,10 @@ def plot_normalization():
         model.sigma.fixed = True
 
         plot = fig.add_subplot(2, 2, n)
-        normalized, snr = normalize(xs, ys, ref_ys=model(xs),
-                                    deg=polynomial_degree, continuum_ranges=continuum_ranges,
-                                    method=None, requested_plot=plot)
 
+        normalization = normalize(xs, ys, ref_ys=model(xs), degree_or_range=polynomial_degree, continuum_ranges=continuum_ranges)
+
+        normalization.plot(plot)
         plot.set_xlim(h_alpha_range.lower_bound() - 5, h_alpha_range.upper_bound() + 5)
         plot.set_ylim(0.4, 1.1)
 
@@ -142,19 +142,15 @@ def plot_diff():
         model.redshift.fixed = True
         model.sigma.fixed = True
 
-        requested_spectra = {}
-
-        normalized, snr = normalize(xs, ys, ref_ys=model(xs),
-                                    deg=polynomial_degree, continuum_ranges=continuum_ranges,
-                                    method=None, requested_spectra=requested_spectra)
-
+        normalization = normalize(xs, ys, ref_ys=model(xs), degree_or_range=polynomial_degree, continuum_ranges=continuum_ranges)
+        
         plot = fig.add_subplot(4, 2, n+0 if n <= 2 else n+2)
 
         plot.set_xlim(h_alpha_range.lower_bound() - 5, h_alpha_range.upper_bound() + 5)
         plot.set_ylim(0.4, 1.1)
 
-        plot.plot(requested_spectra['xs'], requested_spectra['ref_ys'], color='tab:orange')
-        plot.plot(requested_spectra['xs'], requested_spectra['norm'], color='tab:purple')
+        plot.plot(normalization.xs, normalization.ref_ys, color='tab:orange')
+        plot.plot(normalization.xs, normalization.norm, color='tab:purple')
 
         plot.set_title(spectrograph)
         plot.xaxis.set_major_formatter(plt.NullFormatter())
@@ -163,7 +159,7 @@ def plot_diff():
 
         plot = fig.add_subplot(4, 2, n+2 if n <= 2 else n+4)
 
-        plot.plot(requested_spectra['xs'], requested_spectra['norm'] - requested_spectra['ref_ys'], color='tab:green')
+        plot.plot(normalization.xs, normalization.norm - normalization.ref_ys, color='tab:green')
 
         plot.set_xlim(h_alpha_range.lower_bound() - 5, h_alpha_range.upper_bound() + 5)
         plot.set_ylim(-0.02, 0.17)
@@ -200,8 +196,7 @@ def plot_diff_error():
     model.redshift.fixed = True
     model.sigma.fixed = True
 
-    normalized_correct, snr = normalize(xs, ys, ref_ys=model(xs),
-                                deg=polynomial_degree, continuum_ranges=continuum_ranges)
+    normalization_correct = normalize(xs, ys, ref_ys=model(xs), degree_or_range=polynomial_degree, continuum_ranges=continuum_ranges)
 
     for column, delta_rs in enumerate(np.linspace(-0.2, 0.2, 5)):
         for row, delta_resol in enumerate(np.linspace(-3000, 3000, 5)):
@@ -212,16 +207,15 @@ def plot_diff_error():
             model_error.redshift.fixed = True
             model_error.sigma.fixed = True
 
-            normalized_error, snr = normalize(xs, ys, ref_ys=model_error(xs),
-                                        deg=polynomial_degree, continuum_ranges=continuum_ranges)
+            normalization_error = normalize(xs, ys, ref_ys=model_error(xs), degree_or_range=polynomial_degree, continuum_ranges=continuum_ranges)
 
             plot = fig.add_subplot(5, 5, 1 + 5 * row + column)
 
             if column==2 and row==2:
-                plot.plot(xs, normalized_correct - model(xs), '-', color='tab:green')
+                plot.plot(xs, normalization_correct.norm - model(xs), '-', color='tab:green')
             else:
-                plot.plot(xs, normalized_correct - model(xs), ':', color='tab:green')
-                plot.plot(xs, normalized_error - model_error(xs), '-', color='tab:red', alpha=0.5)
+                plot.plot(xs, normalization_correct.norm - model(xs), ':', color='tab:green')
+                plot.plot(xs, normalization_error.norm - model_error(xs), '-', color='tab:red', alpha=0.5)
 
             plot.set_ylim(-0.02, 0.17)
             plot.set_xlim(disc_range.points)
@@ -239,6 +233,7 @@ def plot_diff_error():
 
 
 if __name__ == '__main__':
+
     plot_spectra(all_range)
     plot_spectra(h_alpha_range)
     plot_normalization()

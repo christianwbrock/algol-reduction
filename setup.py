@@ -10,7 +10,7 @@ with open(path.join(here, 'index.rst'), encoding='utf-8') as f:
 
 setup(
     name='reduction',
-    version='1.0.0a7',
+    version='1.0.0a8',
     description='Spectral reduction package',
     long_description=long_description,
     author='Christian W. Brock',

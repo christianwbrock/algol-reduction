@@ -4,15 +4,15 @@ Plot an explanation how normalize works
 
 import os.path
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
-from reduction.spectrum import Spectrum, find_minimum
 from reduction.algol_h_alpha_line_model import AlgolHAlphaModel
-from reduction.normalize import normalize
 from reduction.constants import H_ALPHA
-from reduction.utils.ranges import closed_range
+from reduction.normalize import normalize
 from reduction.plotting import setup_presentation_plots
+from reduction.spectrum import Spectrum, find_minimum
+from reduction.utils.ranges import closed_range
 
 
 def main():
@@ -22,7 +22,7 @@ def main():
     padding_aa = 10.0
     box_aa = 0.5
 
-    polynomial_degree = 7
+    polynomial_degree = range(2, 10)
 
     disc_range = closed_range(H_ALPHA.value - padding_aa, H_ALPHA.value + padding_aa)
     h_alpha_range = closed_range(6520, 6610)
@@ -75,13 +75,11 @@ def main():
 
     plot_224 = fig.add_subplot(224)
 
-    requested_spectra = {}
-    norm, snr = normalize(spectrum.xs, spectrum.ys, reference_shifted_ys, polynomial_degree, continuum_ranges,
-                          method=None, requested_plot=None, requested_spectra=requested_spectra)
+    normalization = normalize(spectrum.xs, spectrum.ys, reference_shifted_ys, polynomial_degree, continuum_ranges)
 
     plot_224.plot(spectrum.xs, spectrum.ys, label='meas', color=color_spec)
     plot_224.plot(spectrum.xs, spectrum.ys / reference_shifted_ys, label='$meas/synth$', color=color_diff)
-    plot_224.plot(spectrum.xs, requested_spectra['fit'], label='best fit', color=color_fit)
+    plot_224.plot(spectrum.xs, normalization.fit, label='best fit', color=color_fit)
 
     if continuum_ranges and continuum_ranges.is_bounded():
         for r in continuum_ranges.intervals():
@@ -90,13 +88,13 @@ def main():
 
     plot_224.yaxis.set_major_formatter(plt.NullFormatter())
     plot_224.set_ylim(ylim)
-    plot_224.set_title('polynomial = best_fit (meas / ref)')
+    plot_224.set_title('polynomial${}^{%d}$ = best_fit (meas / ref_ys)' % normalization.deg)
 
     plot_223 = fig.add_subplot(223)
 
     plot_223.plot(spectrum.xs, spectrum.ys, label='meas', color=color_spec)
     plot_223.plot(spectrum.xs, reference_shifted_ys, label='synth', color=color_ref)
-    plot_223.plot(spectrum.xs, norm, label='normalized', color=color_norm)
+    plot_223.plot(spectrum.xs, normalization.norm, label='normalized', color=color_norm)
 
     # if continuum_ranges and continuum_ranges.is_bounded():
     #     for r in continuum_ranges.intervals():
