@@ -7,12 +7,13 @@
 \usepackage{listings}
 \usepackage{wasysym}
 \usepackage[hidelinks]{hyperref}
+% \usepackage{float}
 
 \DeclareMathOperator*{\argmin}{arg\,min}
 
 %opening
 \title{Continuum Normalization using Synthetic Spectra}
-\author{Christian Brock \footnote{Sternwarte Dresden Gönnsdorf}}
+\author{Christian Brock \footnote{Dresden Gönnsdorf Observatory}}
 \date{February 2019}
 \begin{document}
 
@@ -38,21 +39,23 @@ The ESO Midas documentation \cite{EsoMidas} Volume B states:
 \end{quote}
 
 There are several approaches to solve this problem:
-\cite{Richards1993} and \cite{Liebisch2018} define two continuum values, one to the left and one to the right of the observed absorption line.
-The software tool Visual Spec \cite{DesnouxVSpecTutorial} allows the user to interactively enter continuum points with the mouse and then uses a polynomial fit to approximate the continuum.
-ESO Midas \cite{EsoMidas} also allows to enter continuum points interactively, it uses spline fits by default.
+\begin{itemize} \itemsep -8pt
+\item \cite{Richards1993} p.\ 259, table 2 and \cite{Liebisch2018} use linear approximations of data points at predefined wavelengths, usually one to the left and one to the right of an observed absorption line.
+\item The software tool Visual Spec \cite{DesnouxVSpecTutorial} allows the user to interactively enter continuum points with the mouse and then uses a polynomial fit to approximate the continuum.
+\item ESO Midas \cite{EsoMidas} also allows to enter continuum points interactively, it then uses spline fits by default.
+\end{itemize}
 
 All interactive methods have the following drawbacks. They
-\begin{itemize}
-	\item depend on the knowledge of the user,
+\begin{itemize} \itemsep -8pt
+	\item depend on expert knowledge of the user,
 	\item are not reproducible,
-	\item require a continuum to be present, which is a problem for cold stars or small spectra of broad absorption lines,
+	\item require a continuum to be present, which is a problem with cold stars or small spectra of broad absorption lines,
 	\item cannot be used for any but small observation campaigns.
 \end{itemize}
 
 In this paper we argue that all this drawbacks can be overcome using data points from synthetic spectra of the observed stars.
 For this to works we need to apply some transformations to the synthetic spectrum.
-\begin{itemize}
+\begin{itemize} \itemsep -8pt
 	\item For the {\bf redshift} of the synthetic spectrum to fit the observed spectrum we need to consider the radial velocity of the observed star.
 	\item The {\bf spectral resolution} of the synthetic spectrum needs to be changed to match the observed spectrum.
 \end{itemize}
@@ -65,11 +68,24 @@ We implemented the normalization using the Python programming language, especial
 
 \paragraph{Where to get one}
 For this work we did not calculate our own spectra.
-For enthusiasts we recommend having a look at iSpec \cite{BlancoCuaresmaSoubiranHeiter2014}.
+For enthusiasts we recommend having a look at iSpec \cite{BlancoCuaresmaSoubiranHeiter2014} (see figure \ref{fig:iSpec}).
+\begin{figure}[h]
+	\includegraphics[width=\columnwidth]{img/iSpec.png}
+	\caption{iSpec combines several spectral models under a common interface \cite{BlancoCuaresmaSoubiranHeiter2014}}
+	\label{fig:iSpec}
+\end{figure}
 
-We used the "The POLLUX Database of Stellar Spectra" \cite{Pollux2010}.
-To choose a spectrum one needs at least, the effective temperature, surface gravity, metallicity and rotational velocity of the target star.
+For our work we used the "The POLLUX Database of Stellar Spectra" \cite{Pollux2010}. It supports more spectral models (see figure \ref{fig:pollux}) and does not require the installation of additional software.
+\begin{figure}[h]
+	\includegraphics[width=\columnwidth]{img/pollux_models.png}
+	\caption{Spectral models used by "The POLLUX Database of Stellar Spectra" \cite{Pollux2010}}
+	\label{fig:pollux}
+\end{figure}
+
+To choose a spectrum one needs at least the effective temperature, surface gravity, metallicity and rotational velocity of the target star.
 Such parameters can be found in the Simbad \cite{Simbad} database.
+
+
 
 \paragraph{Applying redshift}
 
@@ -86,12 +102,12 @@ We can then calculate the radial velocity of the star in relation to the earthbo
 	v_{* \rightarrow \earth} = v_{* \rightarrow \sun} - v_{\earth \rightarrow *}
 \end{equation}
 $v_{\earth \rightarrow *}$ is the heliocentric or barycentric correction -- the velocity component toward the target star caused by earth moving around the sun (see figure \ref*{algol_bary}).
-It can be calculated using the \verb|astropy.coordinates.SkyCoord.radial_velocity_correction| method.
+It can be calculated using the \texttt{astropy.\-coordinates.\-SkyCoord.\-radial\_\-velocity\_\-correction} method.
 
-\begin{figure}[hb]
-	\label{algol_bary}
+\begin{figure}[h]
 	\includegraphics[width=\columnwidth]{img/algol_bary.png}
 	\caption{Barycentric correction for the Algol system during a single year}
+	\label{algol_bary}
 \end{figure}
 
 Having the stars radial velocity toward earth we can then calculate the redshift:
@@ -110,54 +126,100 @@ We do this by convolution of the synthetic spectrum with a Gaussian kernel havin
 \begin{equation}
 	\sigma = 2.543 \frac{\overline{\lambda}}{RESOL}
 \end{equation}
-$2.543$ is the standard deviation of a Gaussian bell curve with a FWHM\footnote{full width half maximum} of one. See \cite{SablowskiSchanne2018} pp.\ xxx-xxx for an explaination how spectral resolution is defined.
+$2.543$ is the standard deviation of a Gaussian bell curve with a FWHM\footnote{full width half maximum} of one. See \cite{SablowskiSchanne2018} pp.\ xxx-xxx for an explanation how spectral resolution is defined.
 
 Convolution can be done with the \verb|astropy.convolution.convolve| method applying a \verb|astropy.convolution.Gaussian1DKernel| to the spectrum.
 
-\subsection{Continuum reduction}
+\subsection{Continuum approximation}
+
+For the continuum approximation, the "smooth approximation" as explained in chapter 1, we assume that our continuum can be modeled by a polynomial of a given degree with additional Gaussian noise.
+\begin{equation}
+	\label{eq:cont_model}
+	cont = poly^n + \epsilon
+\end{equation}
 
 \paragraph{Masking}
-Before we continue, calculating the "smooth approximation", as explained in chapter 1,
-one additional thought:
+Before we continue one additional thought:
 We may want to exclude some wavelength regions of the observed spectrum when we know in advance that the observed spectrum does differ significantly from the synthetic one.
 In our Algol example we wanted to measure emission features in the center of the $H\alpha$ line.
-
 This exclusion can be done by masking that regions.
 
-\paragraph{Continuum approximation}
+Additionally, excluding high slope regions makes the approximation more robust against redshift and resolution errors. 
+
+
+\paragraph{Getting the polynomial}
 Having all in place we are able to calculate a smoothed approximation of the continuum:
 \begin{equation}
-	cont_{approx} = \argmin_{polynomial} \sum_{\lambda} \left( polynomial - \frac{S_{obs}}{S_{synth}} \right)^2
+	\label{eq:cont_approx}
+	cont_{approx} = \argmin_{poly^n} \sum_{\lambda} \left( poly^n - \frac{observed}{synth} \right)^2
 \end{equation}
-As approximation we use a polynomial of a given degree.
-The polynomial degree depends on the fitted wavelength range and on properties of the spectrograph.
-This is demonstrated in figure \ref{four_spectra}.
-If unsure one can use the AIC\footnote{Akaike information criterion} \cite{Akaike1974} to choose the degree that best fits the data.
+We sum over the wavelengths of the unmasked data points.
 Fitting can be done with the \verb|numpy.polyfit| method.
 
+\paragraph{What degree?}
+The polynomial degree depends on the fitted wavelength range and on properties of the spectrograph.
+This is demonstrated in figure \ref{four_spectra}.
+In general, as the number of data points vastly exceeds the polynomial degree, the approximation is very robust against oversampling.
+If unsure one can use the AIC\footnote{Akaike information criterion} \cite{Akaike1974} to choose the degree that best fits the data.
+
+\paragraph{About SNR}
+Equation \ref{eq:cont_approx} minimizes the noise term $\epsilon$ in equation \ref{eq:cont_model}.
+We see that our continuum approximation minimizes that noise, i.e.\ maximizes the SNR.
+The $\argmin$ argument is called residual. It can be used to calculate the SNR:
+\begin{equation}
+	residual = \sum_{\lambda} \left( poly^n - \frac{observed}{synth} \right)^2
+\end{equation}
+\begin{equation}
+	\sigma_\epsilon = \sqrt{ \frac{residual}{\|\lambda\|}}
+\end{equation}
+\begin{equation}
+	\label{eq:snr}
+	SNR = 1 / \sigma_\epsilon
+\end{equation}
+The residual is one of the results of \verb|numpy.polyfit|.
+$\|\lambda\|$ donates the number of data points used for the approximation.\footnote{The 1 in the nominator of equation \ref{eq:snr} is actually misleading. It should be replaced by the maximum or the average of the observed spectrum.}
+
+\subsection{Normalization}
 The normalized spectrum can then be written as:
 \begin{equation}
-	spec_{norm} = spec_{obs} / cont_{approx}
+	spec_{norm} = \frac{observed}{cont_{approx}}
 \end{equation}
 
 Figure \ref*{normalize_howto} shows the entire process.
 
-\begin{figure}[hb]
-	\label{four_spectra}
+\begin{figure}[h]
 	\includegraphics[width=\columnwidth]{img/four_spectra_big.png}
-	\caption{$H\alpha$ measured by four different spectrographs. One can see how polynomial of different degree may be required to fit the different spectra.}
+	\caption{$H\alpha$ measured by four different spectrographs. One can see how polynomials of different degree may be required to fit the different spectra.}
+	\label{four_spectra}
 \end{figure}
 
-\begin{figure}[hb]
-	\label{normalize_howto}
+\begin{figure}[h]
 	\includegraphics[width=\columnwidth]{img/normalize_howto.png}
 	\caption{The entire normalization process containing, redshift, convolution with the FWHM of the instrument resolution, calculation of the best fitting polynomial and finally the normalization. The fit is done in the blue area -- the line center is masked.}
+	\label{normalize_howto}
 \end{figure}
 
 
 \section{Conclusions}
 
+We have shown that data points of synthetic spectra can be used for continuum normalization. The approach is very accurate, reproducible, robust against parameter variations and can be used in an automatic pipeline of observation campaigns.
+It is preferable to manual procedures implemented in many tools.
+
+We further displayed that the least square fit of the continuum approximation optimizes SNR.
+
+\paragraph{Software}
+The author implemented the entire normalization as Python command line tool.
+It will be published in the near future and until then, can be received from the author.
+
+\paragraph{Acknowledgments}
+The author would like to acknowledge the help received from the spectroscopic community, especially his local Dresden group and the people running the Dresden Gönnsdorf Observatory. Special thanks goes to Bernd Bitnar, Enrico Gerlach, Thomas Hunger, Josefine Liebisch and Ulrich Waldschläger (in alphabetical order)
+
 \bibliographystyle{apalike}
 \bibliography{../../../../Literature/all}
+
+\section*{About the author}
+\includegraphics[width=\columnwidth]{img/cwb.png}
+During daytime Christian Brock programs algorithms to optimize cellular networks.
+At night he attends to visitors at the Dresden Gönnsdorf Observatory, mentors students, does some visual observations himself and cooperates in the Dresden spectroscopy group.
 
 \end{document}
