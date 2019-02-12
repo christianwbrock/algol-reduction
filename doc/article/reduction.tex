@@ -42,7 +42,7 @@ There are several approaches to solve this problem:
 \begin{itemize} \itemsep -8pt
 \item \cite{Richards1993} p.\ 259, table 2 and \cite{Liebisch2018} use linear approximations of data points at predefined wavelengths, usually one to the left and one to the right of an observed absorption line.
 \item The software tool Visual Spec \cite{DesnouxVSpecTutorial} allows the user to interactively enter continuum points with the mouse and then uses a polynomial fit to approximate the continuum.
-\item ESO Midas \cite{EsoMidas} also allows to enter continuum points interactively, it then uses spline fits by default.
+\item ESO Midas \cite{EsoMidas} also allows to enter continuum points interactively, it then uses spline fits by default (see \cite{SablowskiSchanne2018} p.\ 502).
 \end{itemize}
 
 All interactive methods have the following drawbacks. They
@@ -124,9 +124,9 @@ One can measure the wavelength difference of absorption line minima between the 
 We also need to apply the resolution of the observed spectrum $RESOL$ to the synthetic spectrum.
 We do this by convolution of the synthetic spectrum with a Gaussian kernel having a standard deviation of:
 \begin{equation}
-	\sigma = 2.543 \frac{\overline{\lambda}}{RESOL}
+	\sigma = \frac{\overline{\lambda}}{2.3548\ RESOL}
 \end{equation}
-$2.543$ is the standard deviation of a Gaussian bell curve with a FWHM\footnote{full width half maximum} of one. See \cite{SablowskiSchanne2018} pp.\ xxx-xxx for an explanation how spectral resolution is defined.
+$2.3548$ is the the FWHM\footnote{full width half maximum} of the standard Gaussian. See \cite{SablowskiSchanne2018} p.\ 320 for an explanation how spectral resolution is defined.
 
 Convolution can be done with the \verb|astropy.convolution.convolve| method applying a \verb|astropy.convolution.Gaussian1DKernel| to the spectrum.
 
