@@ -49,14 +49,14 @@ All interactive methods have the following drawbacks. They
 \begin{itemize} \itemsep -8pt
 	\item depend on expert knowledge of the user,
 	\item are not reproducible,
-	\item require a continuum to be present, which is a problem with cold stars or small spectra of broad absorption lines,
+	\item require a continuum to be present, which is a problem with cold stars or spectra of a narrow wavelength region around a broad absorption line,
 	\item cannot be used for any but small observation campaigns.
 \end{itemize}
 
 In this paper we argue that all this drawbacks can be overcome using data points from synthetic spectra of the observed stars.
-For this to works we need to apply some transformations to the synthetic spectrum.
+For this we need to apply some transformations to the synthetic spectrum.
 \begin{itemize} \itemsep -8pt
-	\item For the {\bf redshift} of the synthetic spectrum to fit the observed spectrum we need to consider the radial velocity of the observed star.
+	\item For the {\bf redshift}\footnote{This should be called {\em wavelength correction} as it could also be a blueshift. However, for readability I will stick with the incorrect name {\em redshift}.}  of the synthetic spectrum to fit the observed spectrum we need to consider the radial velocity of the observed star.
 	\item The {\bf spectral resolution} of the synthetic spectrum needs to be changed to match the observed spectrum.
 \end{itemize}
 
@@ -197,7 +197,7 @@ Figure \ref*{normalize_howto} shows the entire process.
 
 \begin{figure}[h]
 	\includegraphics[width=\columnwidth]{img/normalize_howto.png}
-	\caption{The entire normalization process containing, redshift, convolution with the FWHM of the instrument resolution, calculation of the best fitting polynomial and finally the normalization. The fit is done in the blue area -- the line center is masked.}
+	\caption{The entire normalization process containing, redshift, convolution with the FWHM of the instrument resolution, calculation of the best fitting polynomial and finally the normalization. The fit, the red curve in the lower right plot, is calculated in the blue area -- the line center, the white area, is masked.}
 	\label{normalize_howto}
 \end{figure}
 
