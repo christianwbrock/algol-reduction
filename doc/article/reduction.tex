@@ -41,7 +41,7 @@ The ESO Midas documentation \cite{EsoMidas} Volume B states:
 There are several approaches to solve this problem:
 \begin{itemize} \itemsep -8pt
 \item \cite{Richards1993} p.\ 259, table 2 and \cite{Liebisch2018} use linear approximations of data points at predefined wavelengths, usually one to the left and one to the right of an observed absorption line.
-\item The software tool Visual Spec \cite{DesnouxVSpecTutorial} allows the user to interactively enter continuum points with the mouse and then uses a polynomial fit to approximate the continuum.
+\item The software tool Visual Spec \cite{DesnouxVSpecTutorial} allows the user to interactively enter continuum points with the mouse and then uses a "softened" spline to approximate the continuum.
 \item ESO Midas \cite{EsoMidas} also allows to enter continuum points interactively, it then uses spline fits by default (see \cite{SablowskiSchanne2018} p.\ 502).
 \end{itemize}
 
@@ -49,14 +49,14 @@ All interactive methods have the following drawbacks. They
 \begin{itemize} \itemsep -8pt
 	\item depend on expert knowledge of the user,
 	\item are not reproducible,
-	\item require a continuum to be present, which is a problem with cold stars or small spectra of broad absorption lines,
+	\item require a continuum to be present, which is a problem with cold stars or spectra of a narrow wavelength region around a broad absorption line,
 	\item cannot be used for any but small observation campaigns.
 \end{itemize}
 
 In this paper we argue that all this drawbacks can be overcome using data points from synthetic spectra of the observed stars.
-For this to works we need to apply some transformations to the synthetic spectrum.
+For this we need to apply some transformations to the synthetic spectrum.
 \begin{itemize} \itemsep -8pt
-	\item For the {\bf redshift} of the synthetic spectrum to fit the observed spectrum we need to consider the radial velocity of the observed star.
+	\item For the {\bf redshift}\footnote{This should be called {\em wavelength correction} as it could also be a blueshift. However, for readability I will stick with the incorrect name {\em redshift}.}  of the synthetic spectrum to fit the observed spectrum we need to consider the radial velocity of the observed star.
 	\item The {\bf spectral resolution} of the synthetic spectrum needs to be changed to match the observed spectrum.
 \end{itemize}
 
@@ -99,7 +99,7 @@ Here we assume that the radial velocity of the target star in relation to the su
 We can then calculate the radial velocity of the star in relation to the earthbound observer $v_{* \rightarrow \earth}$:
 \begin{equation}
 	\label{eq:rv}
-	v_{* \rightarrow \earth} = v_{* \rightarrow \sun} - v_{\earth \rightarrow *}
+	v_{* \rightarrow \earth} = v_{* \rightarrow \sun} - v_{\earth \rightarrow \sun}
 \end{equation}
 $v_{\earth \rightarrow *}$ is the heliocentric or barycentric correction -- the velocity component toward the target star caused by earth moving around the sun (see figure \ref*{algol_bary}).
 It can be calculated using the \texttt{astropy.\-coordinates.\-SkyCoord.\-radial\_\-velocity\_\-correction} method.
@@ -132,10 +132,10 @@ Convolution can be done with the \verb|astropy.convolution.convolve| method appl
 
 \subsection{Continuum approximation}
 
-For the continuum approximation, the "smooth approximation" as explained in chapter 1, we assume that our continuum can be modeled by a polynomial of a given degree with additional Gaussian noise.
+For the continuum approximation, the "smooth approximation" as explained in chapter 1, we assume that our continuum can be modeled by a polynomial $p_n$ of a given degree $n$ with additional Gaussian noise.
 \begin{equation}
 	\label{eq:cont_model}
-	cont = poly^n + \epsilon
+	cont = p_n + \epsilon
 \end{equation}
 
 \paragraph{Masking}
@@ -151,7 +151,7 @@ Additionally, excluding high slope regions makes the approximation more robust a
 Having all in place we are able to calculate a smoothed approximation of the continuum:
 \begin{equation}
 	\label{eq:cont_approx}
-	cont_{approx} = \argmin_{poly^n} \sum_{\lambda} \left( poly^n - \frac{observed}{synth} \right)^2
+	cont_{approx} = \argmin_{p_n} \sum_{\lambda} \left( p_n - \frac{observed}{synth} \right)^2
 \end{equation}
 We sum over the wavelengths of the unmasked data points.
 Fitting can be done with the \verb|numpy.polyfit| method.
@@ -160,6 +160,7 @@ Fitting can be done with the \verb|numpy.polyfit| method.
 The polynomial degree depends on the fitted wavelength range and on properties of the spectrograph.
 This is demonstrated in figure \ref{four_spectra}.
 In general, as the number of data points vastly exceeds the polynomial degree, the approximation is very robust against oversampling.
+In the Algol project we usually use $n=5$.
 If unsure one can use the AIC\footnote{Akaike information criterion} \cite{Akaike1974} to choose the degree that best fits the data.
 
 \paragraph{About SNR}
@@ -167,17 +168,18 @@ Equation \ref{eq:cont_approx} minimizes the noise term $\epsilon$ in equation \r
 We see that our continuum approximation minimizes that noise, i.e.\ maximizes the SNR.
 The $\argmin$ argument is called residual. It can be used to calculate the SNR:
 \begin{equation}
-	residual = \sum_{\lambda} \left( poly^n - \frac{observed}{synth} \right)^2
+	residual = \sum_N \left( p_n - \frac{observed}{synth} \right)^2
 \end{equation}
+$N$ are the data points used for the approximation, the measured points of the observed spectrum (not removed by masking).
 \begin{equation}
-	\sigma_\epsilon = \sqrt{ \frac{residual}{\|\lambda\|}}
+	\sigma_\epsilon = \sqrt{ \frac{residual}{\|N\|}}
 \end{equation}
 \begin{equation}
 	\label{eq:snr}
 	SNR = 1 / \sigma_\epsilon
 \end{equation}
 The residual is one of the results of \verb|numpy.polyfit|.
-$\|\lambda\|$ donates the number of data points used for the approximation.\footnote{The 1 in the nominator of equation \ref{eq:snr} is actually misleading. It should be replaced by the maximum or the average of the observed spectrum.}
+$\|N\|$ donates the number of data points used for the approximation.\footnote{The 1 in the nominator of equation \ref{eq:snr} is actually misleading. It should be replaced by the maximum or the average of the observed spectrum.}
 
 \subsection{Normalization}
 The normalized spectrum can then be written as:
@@ -189,13 +191,13 @@ Figure \ref*{normalize_howto} shows the entire process.
 
 \begin{figure}[h]
 	\includegraphics[width=\columnwidth]{img/four_spectra_big.png}
-	\caption{$H\alpha$ measured by four different spectrographs. One can see how polynomials of different degree may be required to fit the different spectra.}
+	\caption{$H\alpha$ measured by four different spectrographs. One can see how polynomials of different degree may be required to fit the different spectra. The Echelle requires a degree of $n=5$ while the others only need a $3$.}
 	\label{four_spectra}
 \end{figure}
 
 \begin{figure}[h]
 	\includegraphics[width=\columnwidth]{img/normalize_howto.png}
-	\caption{The entire normalization process containing, redshift, convolution with the FWHM of the instrument resolution, calculation of the best fitting polynomial and finally the normalization. The fit is done in the blue area -- the line center is masked.}
+	\caption{The entire normalization process containing, redshift, convolution with the FWHM of the instrument resolution, calculation of the best fitting polynomial and finally the normalization. The fit, the red curve in the lower right plot, is calculated in the blue area -- the line center, the white area, is masked.}
 	\label{normalize_howto}
 \end{figure}
 
@@ -215,7 +217,7 @@ It will be published in the near future and until then, can be received from the
 The author would like to acknowledge the help received from the spectroscopic community, especially his local Dresden group and the people running the Dresden Gönnsdorf Observatory. Special thanks goes to Bernd Bitnar, Enrico Gerlach, Thomas Hunger, Josefine Liebisch and Ulrich Waldschläger (in alphabetical order)
 
 \bibliographystyle{apalike}
-\bibliography{../../../../Literature/all}
+\bibliography{all}
 
 \section*{About the author}
 \includegraphics[width=\columnwidth]{img/cwb.png}
