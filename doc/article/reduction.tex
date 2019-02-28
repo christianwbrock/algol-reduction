@@ -31,7 +31,7 @@
 
 For an amateur project observing the $H\alpha$ emission of an accretion disc around Algol ($\beta$ Persei) \cite{Bitnar2017}, we needed to compare the observed spectra against synthetic spectra of an B8V star showing no emissions.
 
-As the intensity of the emissions is below ten percent of the continuum, we needed a good SNR\footnote{signal to noise ratio} and a very accurate continuum normalization.
+As the intensity of the emissions is below ten percent of the continuum, we needed a good signal to noise ratio [SNR] and a very accurate continuum normalization.
 
 The ESO Midas documentation \cite{EsoMidas} Volume B states:
 \begin{quote}
@@ -39,14 +39,14 @@ The ESO Midas documentation \cite{EsoMidas} Volume B states:
 \end{quote}
 
 There are several approaches to solve this problem:
-\begin{itemize} \itemsep -8pt
-\item \cite{Richards1993} p.\ 259, table 2 and \cite{Liebisch2018} use linear approximations of data points at predefined wavelengths, usually one to the left and one to the right of an observed absorption line.
+\begin{itemize} % \itemsep -8pt
+\item Richards \cite{Richards1993} p.\ 259, table 2 and Liebisch \cite{Liebisch2018} use linear approximations of data points at predefined wavelengths, usually one to the left and one to the right of an observed absorption line.
 \item The software tool Visual Spec \cite{DesnouxVSpecTutorial} allows the user to interactively enter continuum points with the mouse and then uses a "softened" spline to approximate the continuum.
 \item ESO Midas \cite{EsoMidas} also allows to enter continuum points interactively, it then uses spline fits by default (see \cite{SablowskiSchanne2018} p.\ 502).
 \end{itemize}
 
 All interactive methods have the following drawbacks. They
-\begin{itemize} \itemsep -8pt
+\begin{itemize} % \itemsep -8pt
 	\item depend on expert knowledge of the user,
 	\item are not reproducible,
 	\item require a continuum to be present, which is a problem with cold stars or spectra of a narrow wavelength region around a broad absorption line,
@@ -55,8 +55,8 @@ All interactive methods have the following drawbacks. They
 
 In this paper we argue that all this drawbacks can be overcome using data points from synthetic spectra of the observed stars.
 For this we need to apply some transformations to the synthetic spectrum.
-\begin{itemize} \itemsep -8pt
-	\item For the {\bf redshift}\footnote{This should be called {\em wavelength correction} as it could also be a blueshift. However, for readability I will stick with the incorrect name {\em redshift}.}  of the synthetic spectrum to fit the observed spectrum we need to consider the radial velocity of the observed star.
+\begin{itemize} % \itemsep -8pt
+	\item For the {\bf redshift}\footnote{This should be called {\em wavelength correction} as it could also be a blueshift. However, for readability we will stick with the incorrect name {\em redshift}.}  of the synthetic spectrum to fit the observed spectrum we need to consider the radial velocity of the observed star.
 	\item The {\bf spectral resolution} of the synthetic spectrum needs to be changed to match the observed spectrum.
 \end{itemize}
 
@@ -69,14 +69,14 @@ We implemented the normalization using the Python programming language, especial
 \paragraph{Where to get one}
 For this work we did not calculate our own spectra.
 For enthusiasts we recommend having a look at iSpec \cite{BlancoCuaresmaSoubiranHeiter2014} (see figure \ref{fig:iSpec}).
-\begin{figure}[h]
+\begin{figure}[ht]
 	\includegraphics[width=\columnwidth]{img/iSpec.png}
 	\caption{iSpec combines several spectral models under a common interface \cite{BlancoCuaresmaSoubiranHeiter2014}}
 	\label{fig:iSpec}
 \end{figure}
 
 For our work we used the "The POLLUX Database of Stellar Spectra" \cite{Pollux2010}. It supports more spectral models (see figure \ref{fig:pollux}) and does not require the installation of additional software.
-\begin{figure}[h]
+\begin{figure}[ht]
 	\includegraphics[width=\columnwidth]{img/pollux_models.png}
 	\caption{Spectral models used by "The POLLUX Database of Stellar Spectra" \cite{Pollux2010}}
 	\label{fig:pollux}
@@ -101,10 +101,10 @@ We can then calculate the radial velocity of the star in relation to the earthbo
 	\label{eq:rv}
 	v_{* \rightarrow \earth} = v_{* \rightarrow \sun} - v_{\earth \rightarrow \sun}
 \end{equation}
-$v_{\earth \rightarrow *}$ is the heliocentric or barycentric correction -- the velocity component toward the target star caused by earth moving around the sun (see figure \ref*{algol_bary}).
+$v_{\earth \rightarrow \sun}$ is the heliocentric or barycentric correction -- the velocity component toward the target star caused by earth moving around the sun (see figure \ref*{algol_bary}).
 It can be calculated using the \texttt{astropy.\-coordinates.\-SkyCoord.\-radial\_\-velocity\_\-correction} method.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 	\includegraphics[width=\columnwidth]{img/algol_bary.png}
 	\caption{Barycentric correction for the Algol system during a single year}
 	\label{algol_bary}
@@ -126,7 +126,7 @@ We do this by convolution of the synthetic spectrum with a Gaussian kernel havin
 \begin{equation}
 	\sigma = \frac{\overline{\lambda}}{2.3548\ RESOL}
 \end{equation}
-$2.3548$ is the the FWHM\footnote{full width half maximum} of the standard Gaussian. See \cite{SablowskiSchanne2018} p.\ 320 for an explanation how spectral resolution is defined.
+$2.3548$ is the the full width half maximum [FWHM] of the standard Gaussian. See \cite{SablowskiSchanne2018} p.\ 320 for an explanation how spectral resolution is defined.
 
 Convolution can be done with the \verb|astropy.convolution.convolve| method applying a \verb|astropy.convolution.Gaussian1DKernel| to the spectrum.
 
@@ -163,6 +163,13 @@ In general, as the number of data points vastly exceeds the polynomial degree, t
 In the Algol project we usually use $n=5$.
 If unsure one can use the AIC\footnote{Akaike information criterion} \cite{Akaike1974} to choose the degree that best fits the data.
 
+\begin{figure}[ht]
+	\includegraphics[width=\columnwidth]{img/four_spectra_big_4x1.png}
+	\caption{$H\alpha$ measured by four different spectrographs. One can see how polynomials of different degree may be required to fit the different spectra. The Echelle requires a degree of $n=5$ while the others only need a $3$. Many thanks to Uwe Zurmühl (transmission grating), Bernd Bitnar (Lhires III) and Ulrich Waldschläger for the spectra.}
+	\label{four_spectra}
+\end{figure}
+
+
 \paragraph{About SNR}
 Equation \ref{eq:cont_approx} minimizes the noise term $\epsilon$ in equation \ref{eq:cont_model}.
 We see that our continuum approximation minimizes that noise, i.e.\ maximizes the SNR.
@@ -189,15 +196,9 @@ The normalized spectrum can then be written as:
 
 Figure \ref*{normalize_howto} shows the entire process.
 
-\begin{figure}[h]
-	\includegraphics[width=\columnwidth]{img/four_spectra_big.png}
-	\caption{$H\alpha$ measured by four different spectrographs. One can see how polynomials of different degree may be required to fit the different spectra. The Echelle requires a degree of $n=5$ while the others only need a $3$.}
-	\label{four_spectra}
-\end{figure}
-
-\begin{figure}[h]
-	\includegraphics[width=\columnwidth]{img/normalize_howto.png}
-	\caption{The entire normalization process containing, redshift, convolution with the FWHM of the instrument resolution, calculation of the best fitting polynomial and finally the normalization. The fit, the red curve in the lower right plot, is calculated in the blue area -- the line center, the white area, is masked.}
+\begin{figure}[ht]
+	\includegraphics[width=\columnwidth]{img/normalize_howto_4x1.png}
+	\caption{The entire normalization process containing, redshift, convolution with the FWHM of the instrument resolution, calculation of the best fitting polynomial and finally the normalization. The fit, the red curve in the third plot, is calculated in the blue area -- the line center, the white area, is masked.}
 	\label{normalize_howto}
 \end{figure}
 
@@ -216,7 +217,7 @@ It will be published in the near future and until then, can be received from the
 \paragraph{Acknowledgments}
 The author would like to acknowledge the help received from the spectroscopic community, especially his local Dresden group and the people running the Dresden Gönnsdorf Observatory. Special thanks goes to Bernd Bitnar, Enrico Gerlach, Thomas Hunger, Josefine Liebisch and Ulrich Waldschläger (in alphabetical order)
 
-\bibliographystyle{apalike}
+\bibliographystyle{plain}
 \bibliography{all}
 
 \section*{About the author}
