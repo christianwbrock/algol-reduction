@@ -1,3 +1,4 @@
+% !TeX spellcheck = en_US
 \documentclass[10pt,a4paper,notitlepage,twocolumn]{article}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
@@ -31,7 +32,7 @@
 
 For an amateur project observing the $H\alpha$ emission of an accretion disc around Algol ($\beta$ Persei) \cite{Bitnar2017}, we needed to compare the observed spectra against synthetic spectra of an B8V star showing no emissions.
 
-As the intensity of the emissions is below ten percent of the continuum, we needed a good signal to noise ratio [SNR] and a very accurate continuum normalization.
+As the intensity of the emissions is below ten percent of the continuum, we needed a good SNR\footnote{signal to noise ratio} and a very accurate continuum normalization.
 
 The ESO Midas documentation \cite{EsoMidas} Volume B states:
 \begin{quote}
@@ -61,6 +62,8 @@ For this we need to apply some transformations to the synthetic spectrum.
 \end{itemize}
 
 We implemented the normalization using the Python programming language, especially the numpy \cite{numpy} and astropy \cite{astropy:2013} \cite{astropy:2018} packages.
+
+We are aware, that there are other normalization methods, e.g.\ using recorded standard stars. A good overview can be found by Trypsteen and Walker \cite{TrypsteenWalker2017} pp.\ 70-75.
 
 \section{Methods}
 
@@ -126,7 +129,7 @@ We do this by convolution of the synthetic spectrum with a Gaussian kernel havin
 \begin{equation}
 	\sigma = \frac{\overline{\lambda}}{2.3548\ RESOL}
 \end{equation}
-$2.3548$ is the the full width half maximum [FWHM] of the standard Gaussian. See \cite{SablowskiSchanne2018} p.\ 320 for an explanation how spectral resolution is defined.
+$2.3548$ is the the FWHM\footnote{full width half maximum} of the standard Gaussian. See Sablowski and Schanne \cite{SablowskiSchanne2018} p.\ 320 for an explanation how spectral resolution is defined.
 
 Convolution can be done with the \verb|astropy.convolution.convolve| method applying a \verb|astropy.convolution.Gaussian1DKernel| to the spectrum.
 
