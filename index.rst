@@ -12,7 +12,3 @@ Components are:
 - loading spectra from fits and text files
 - display
 - normalization using synthetic spectra
-
- .. toctree::
-   :maxdepth: 2
-   :caption: Contents:

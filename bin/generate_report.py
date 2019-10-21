@@ -180,6 +180,7 @@ def main():
         def as_redshift(radial_velocity):
             return H_ALPHA * (radial_velocity / const.c).to(1)
 
+        redshift_predicted = as_redshift(rv_predicted)
         redshift_from_data = u.Quantity(_find_minimum(xs, ys, spectrum.dx, 10, 1.5), u.AA) - H_ALPHA
 
         sigma = H_ALPHA / (res or 15000) / 2.354

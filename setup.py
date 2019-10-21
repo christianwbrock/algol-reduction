@@ -9,8 +9,8 @@ with open(path.join(here, 'index.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='reduction',
-    version='1.0.0a8',
+    name='algol_reduction',
+    version='1.0.0a9',
     description='Spectral reduction package',
     long_description=long_description,
     author='Christian W. Brock',
