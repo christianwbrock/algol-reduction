@@ -10,7 +10,7 @@ with open(path.join(here, 'index.rst'), encoding='utf-8') as f:
 
 setup(
     name='algol_reduction',
-    version='1.0.0a10',
+    version='1.0.0b1',
     description='Spectral reduction package',
     long_description=long_description,
     author='Christian W. Brock',
@@ -31,8 +31,15 @@ setup(
         'astroplan',
         'icalendar'
     ],
+    setup_requires=[
+        'wheel',
+        'twine'
+    ],
     package_data={
-        'reduction': ['*.spec', '*.spec.txt']
+        '': '*.rst',
+        'data': '**/*.spec',
+# recursive-include data *.spec.txt
+# recursive-include data *.cmdline
     },
     entry_points={
             'console_scripts': [
