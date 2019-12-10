@@ -286,6 +286,7 @@ def normalize_args(spectrum, args, cut=15):
     else:
         redshift = 0.0
 
+    # TODO apply redshift to reference spectrum
     xs = xs + redshift
 
     continuum_ranges = closed_range(np.nanmin(xs), np.nanmax(xs))
@@ -295,6 +296,7 @@ def normalize_args(spectrum, args, cut=15):
     if args.ranges:
         continuum_ranges &= _list_to_set(args.ranges)
 
+    # BUG: does not work with two entries like -C 1 2 -C 3 4
     if args.non_ranges:
         continuum_ranges &= ~ _list_to_set(args.non_ranges)
 
