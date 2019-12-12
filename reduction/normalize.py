@@ -282,12 +282,10 @@ def normalize_args(spectrum, args, cut=15):
         min_spectrum = find_minimum(Spectrum.from_arrays(xs, ys), *args.center_minimum)
         min_ref = find_minimum(ref_spectrum, *args.center_minimum)
 
-        redshift = min_ref - min_spectrum
-    else:
-        redshift = 0.0
-
-    # TODO apply redshift to reference spectrum
-    xs = xs + redshift
+        redshift = min_spectrum - min_ref
+        if redshift:
+            logger.info(f'Apply redshift of {redshift} tro reference spectrum')
+            ref_spectrum = Spectrum.from_arrays(ref_spectrum.xs + redshift, ref_spectrum.ys)
 
     continuum_ranges = closed_range(np.nanmin(xs), np.nanmax(xs))
     if ref_spectrum:
