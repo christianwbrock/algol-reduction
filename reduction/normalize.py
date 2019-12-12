@@ -334,9 +334,9 @@ def _list_to_set(lst):
 
     result = None
 
-    for item in lst:
-        item = closed_range(item[0], item[1])
-        result = result.union(item) if result else item
+    for lower, upper in lst:
+        item = closed_range(lower, upper)
+        result = result | item if result else item
 
     return result
 
