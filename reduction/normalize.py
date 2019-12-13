@@ -199,6 +199,29 @@ class Normalization:
 
         np.savetxt(filename, data, header=header)
 
+    def store_as_fits(self, orig_filename, new_filename, index=0):
+        """Load fits header from old file, add some cards and store the normalized spectrum."""
+
+        from astropy.io import fits
+        with fits.open(orig_filename) as hdu_list:
+            hdr = hdu_list[index].header.copy()
+
+        fits.Header()
+
+        hdr.append(('', ''), end=True)
+        hdr.append(('HISTORY', 'Normalized w/ algol-reduction.'), end=True)
+        hdr.append(('NORM_DEG', len(self.params) - 1), end=True)
+        for i in range(self.polynomial.order):
+            hdr.append((f'NORM_CO{i}', self.params[i]), end=True)
+
+        hdr.set(keyword='BITPIX', value=-32)  # the value for float32
+        hdr.set(keyword='NAXIS', value=1)
+        hdr.set(keyword='NAXIS1', value=len(self.xs))
+        hdr.set(keyword='CRPIX1', value=1.0)
+        hdr.set(keyword='CRVAL1', value=self.xs[0])
+        hdr.set(keyword='CDELT1', value=(self.xs[-1] - self.xs[0]) / (len(self.xs) - 1))
+        fits.writeto(new_filename, data=(np.array(self.norm, dtype=np.float32)), header=hdr, checksum=True)
+
 
 def normalization_parser(add_help=False):
     arg_parser = ArgumentParser(add_help=add_help)
