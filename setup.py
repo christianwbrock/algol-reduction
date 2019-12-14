@@ -10,7 +10,7 @@ with open(path.join(here, 'index.rst'), encoding='utf-8') as f:
 
 setup(
     name='algol_reduction',
-    version='1.0.0b1',
+    version='1.0.0b5',
     description='Spectral reduction package',
     long_description=long_description,
     author='Christian W. Brock',
@@ -27,8 +27,8 @@ setup(
         'matplotlib',
         'numpy',
         'scipy',
-        'astropy',
-        'astroplan',
+        'astropy>=3.2.2',
+        'astroplan>=0.6',
         'icalendar'
     ],
     setup_requires=[
