@@ -113,7 +113,7 @@ def time_parser(prefix, description=None, default=None):
     return res
 
 
-def time_delta_parser(prefix, description=None, default=None, format_default='jd'):
+def time_delta_parser(prefix, description=None, default=None):
     """
     Some times one wants to ask the user for a time interval.
 
@@ -133,7 +133,7 @@ def time_delta_parser(prefix, description=None, default=None, format_default='jd
     value_group.add_argument('--' + prefix, default=default, type=float, metavar='val1',
                              help='(default: %(default)s)' if default else None)
     value_group.add_argument('--' + prefix + '-val2', metavar='val2')
-    value_group.add_argument('--' + prefix + '-format', metavar='format', default=format_default,
+    value_group.add_argument('--' + prefix + '-format', metavar='format',
                              help='%s (default: %%(default)s)' % " or ".join(TimeDelta.FORMATS.keys()))
     value_group.add_argument('--' + prefix + '-scale',
                              help='one of %s or None.' % ", ".join(TimeDelta.SCALES))

@@ -30,6 +30,10 @@ def main():
     parser.add_argument('--store-dat', metavar='filename.dat',
                         help='store object, reference and normalized spectrum as dat file')
 
+    parser.add_argument('--store-fits', metavar='filename.fits',
+                        help='store normalized spectrum as fits file. '
+                             'For this to work, the original file must also be a fits file')
+
     args = parser.parse_args()
 
     logging.basicConfig(level=get_loglevel(logger, args))
@@ -52,6 +56,8 @@ def main():
         if args.store_dat:
             normalization.store_as_dat(args.store_dat)
 
+        if args.store_fits:
+            normalization.store_as_fits(filename, args.store_fits)
 
 if __name__ == '__main__':
     main()

@@ -1,18 +1,14 @@
-#!python
-# -*- coding: utf-8 -*-
-"""
-For a periodic star we want to schedule observations for a given time period.
+"""For a periodic star we want to schedule observations for a given time period.
 """
 
 import logging
-import os.path
 from argparse import ArgumentParser
 from collections import namedtuple
 from datetime import datetime, timezone
 
 import astropy.units as u
 import numpy as np
-from astroplan import Observer, MAGIC_TIME
+from astroplan import Observer
 from astropy.coordinates import EarthLocation, SkyCoord
 from astropy.time import Time
 from icalendar import Calendar, Event
@@ -21,7 +17,7 @@ from reduction.commandline import time_parser, get_time_from_args, time_delta_pa
 from reduction.commandline import verbose_parser, get_loglevel
 from reduction.stars.variable_stars import RegularVariableObject
 
-logger = logging.getLogger(os.path.basename(__file__))
+logger = logging.getLogger(__name__)
 
 
 def _create_schedule(filename, start_time, end_time, target_name, target, location, sun_horizon, star_horizon, phases,
@@ -62,11 +58,11 @@ def _get_nights(observer, start_time, end_time, horizon):
         dusk = start_time
     else:
         dusk = observer.sun_set_time(start_time, which='next', horizon=horizon)
-        if dusk == MAGIC_TIME:
+        if dusk.mask:
             return [[]]
 
     dawn = observer.sun_rise_time(dusk, which='next', horizon=horizon)
-    if dawn == MAGIC_TIME:
+    if dawn.mask:
         return [[dusk, end_time]]
 
     nights = [[dusk, dawn]]
@@ -92,11 +88,11 @@ def _get_time_above_horizon(observer, start_time, end_time, target_coordinate, h
         dusk = start_time
     else:
         dusk = observer.target_rise_time(start_time, target_coordinate, which='next', horizon=horizon)
-        if dusk == MAGIC_TIME:
+        if dusk.mask:
             return [[]]
 
     dawn = observer.target_set_time(dusk, target_coordinate, which='next', horizon=horizon)
-    if dawn == MAGIC_TIME:
+    if dawn.mask:
         return [[dusk, end_time]]
 
     nights = [[dusk, dawn]]
@@ -105,7 +101,7 @@ def _get_time_above_horizon(observer, start_time, end_time, target_coordinate, h
         dusk = observer.target_rise_time(dawn, target_coordinate, which='next', horizon=horizon)
         dawn = observer.target_set_time(dusk, target_coordinate, which='next', horizon=horizon)
 
-        if dusk == MAGIC_TIME or dawn == MAGIC_TIME:
+        if dusk.mask or dawn.mask:
             break
 
         nights.append([dusk, dawn])
@@ -201,7 +197,7 @@ def _intersection(list0, list1):
 
 def _az_string(az):
     """Return an azimuth angle as compass direction.
-    
+
         >>> _az_string(0)
         'N'
         >>> _az_string(11)
@@ -259,9 +255,7 @@ Observation = namedtuple('Observation', 'nbr ph0 ph1 t0 t1 comment')
 def _calculate_schedule(observer, obs_times, target, variable_star):
     result = []
 
-    for i, obs in enumerate(obs_times):
-        t0 = obs[0]
-        t1 = obs[1]
+    for i, [t0, t1] in enumerate(obs_times):
 
         assert isinstance(t0, Time)
         assert isinstance(t1, Time)
@@ -312,17 +306,13 @@ def _display_ical(filename, observer, observations, target_name):
 
 
 def main():
-    # todo make time zone aware?
-    local_timezone = datetime.now(timezone.utc).astimezone().tzinfo
-    noon = datetime.now(tz=local_timezone).replace(hour=12, minute=0, second=0, microsecond=0)
-    noon = Time(noon)
-
-    from reduction.stars.algol import unknown as target
+    # we use UTC as we have no observer location yet
+    noon = Time(datetime.now(tz=timezone.utc).replace(hour=12, minute=0, second=0, microsecond=0))
 
     parser = ArgumentParser(parents=[verbose_parser, time_parser('start', default=noon.isot),
                                      time_parser('end', default=(noon + 366 * u.day).isot),
-                                     time_parser('epoch', default=target.epoch.isot),
-                                     time_delta_parser('period', default='2.8673285')],
+                                     time_parser('epoch'),
+                                     time_delta_parser('period')],
                             fromfile_prefix_chars='@',
                             description='Plan observations for a possibly variable star.')
 
@@ -330,13 +320,12 @@ def main():
                         help='output file name (default: %(default)s)')
     parser.add_argument('--entry-prefix', type=str, metavar='str',
                         help='Begin of each calendar entry (default: target name or sky coordinates)')
-    sky_coord = parser.add_mutually_exclusive_group()
+    sky_coord = parser.add_mutually_exclusive_group(required=True)
     sky_coord.add_argument('--target-name', type=str, metavar='str',
                            help='Try to load target coordinate using name, e.g. Algol, DelCep or M42')
     sky_coord.add_argument('--sky-coord', type=str, nargs=2, metavar=('ra', 'dec'),
-                           default=('3h9m26.3s', '+41d1m40.8s'),
-                           help='Sky coordinates of target (default: Algol at %(default)s)')
-    earth_coord = parser.add_mutually_exclusive_group()
+                           help='Sky coordinates of target, e.g. 330d 5d')
+    earth_coord = parser.add_mutually_exclusive_group(required=True)
     earth_coord.add_argument('--observatory', type=str, metavar='name',
                              help='Try to load observer location using observatory name')
     earth_coord.add_argument('--address', type=str, metavar='str',
@@ -355,6 +344,7 @@ def main():
                              '(default: %(default)s)')
 
     args = parser.parse_args()
+
     logging.basicConfig(level=get_loglevel(logging.INFO, args))
 
     start_time = get_time_from_args(args, 'start')

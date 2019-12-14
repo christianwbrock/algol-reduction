@@ -199,6 +199,29 @@ class Normalization:
 
         np.savetxt(filename, data, header=header)
 
+    def store_as_fits(self, orig_filename, new_filename, index=0):
+        """Load fits header from old file, add some cards and store the normalized spectrum."""
+
+        from astropy.io import fits
+        with fits.open(orig_filename) as hdu_list:
+            hdr = hdu_list[index].header.copy()
+
+        fits.Header()
+
+        hdr.append(('', ''), end=True)
+        hdr.append(('HISTORY', 'Normalized w/ algol-reduction.'), end=True)
+        hdr.append(('NORM_DEG', len(self.params) - 1), end=True)
+        for i in range(self.polynomial.order):
+            hdr.append((f'NORM_CO{i}', self.params[i]), end=True)
+
+        hdr.set(keyword='BITPIX', value=-32)  # the value for float32
+        hdr.set(keyword='NAXIS', value=1)
+        hdr.set(keyword='NAXIS1', value=len(self.xs))
+        hdr.set(keyword='CRPIX1', value=1.0)
+        hdr.set(keyword='CRVAL1', value=self.xs[0])
+        hdr.set(keyword='CDELT1', value=(self.xs[-1] - self.xs[0]) / (len(self.xs) - 1))
+        fits.writeto(new_filename, data=(np.array(self.norm, dtype=np.float32)), header=hdr, checksum=True)
+
 
 def normalization_parser(add_help=False):
     arg_parser = ArgumentParser(add_help=add_help)
@@ -282,11 +305,10 @@ def normalize_args(spectrum, args, cut=15):
         min_spectrum = find_minimum(Spectrum.from_arrays(xs, ys), *args.center_minimum)
         min_ref = find_minimum(ref_spectrum, *args.center_minimum)
 
-        redshift = min_ref - min_spectrum
-    else:
-        redshift = 0.0
-
-    xs = xs + redshift
+        redshift = min_spectrum - min_ref
+        if redshift:
+            logger.info(f'Apply redshift of {redshift} tro reference spectrum')
+            ref_spectrum = Spectrum.from_arrays(ref_spectrum.xs + redshift, ref_spectrum.ys)
 
     continuum_ranges = closed_range(np.nanmin(xs), np.nanmax(xs))
     if ref_spectrum:
@@ -295,6 +317,7 @@ def normalize_args(spectrum, args, cut=15):
     if args.ranges:
         continuum_ranges &= _list_to_set(args.ranges)
 
+    # BUG: does not work with two entries like -C 1 2 -C 3 4
     if args.non_ranges:
         continuum_ranges &= ~ _list_to_set(args.non_ranges)
 
@@ -332,9 +355,9 @@ def _list_to_set(lst):
 
     result = None
 
-    for item in lst:
-        item = closed_range(item[0], item[1])
-        result = result.union(item) if result else item
+    for lower, upper in lst:
+        item = closed_range(lower, upper)
+        result = result | item if result else item
 
     return result
 

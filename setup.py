@@ -10,7 +10,7 @@ with open(path.join(here, 'index.rst'), encoding='utf-8') as f:
 
 setup(
     name='algol_reduction',
-    version='1.0.0a9',
+    version='1.0.0b5',
     description='Spectral reduction package',
     long_description=long_description,
     author='Christian W. Brock',
@@ -27,20 +27,29 @@ setup(
         'matplotlib',
         'numpy',
         'scipy',
-        'astropy',
-        'astroplan',
+        'astropy>=3.2.2',
+        'astroplan>=0.6',
         'icalendar'
     ],
+    setup_requires=[
+        'wheel',
+        'twine'
+    ],
     package_data={
-        'reduction': ['*.spec', '*.spec.txt']
+        '': '*.rst',
+        'data': '**/*.spec',
+# recursive-include data *.spec.txt
+# recursive-include data *.cmdline
     },
-    scripts=[
-        'bin/display_fits_1d.py',
-        'bin/fits_timeline.py',
-        'bin/normalize_spectrum.py',
-        'bin/star_altitude.py',
-        'bin/generate_report.py',
-        'bin/plan_observations.py',
-        'bin/fitssetval.py'
-    ]
+    entry_points={
+            'console_scripts': [
+                'fits_display1d=reduction.scripts.display_fits_1d:main',
+                'fits_setval=reduction.scripts.fitssetval:main',
+                'fits_timeline=reduction.scripts.fits_timeline:main',
+                'normalize_spectrum=reduction.scripts.normalize_spectrum:main',
+                'plan_observations=reduction.scripts.plan_observations:main',
+                'generate_report=reduction.scripts.generate_report:main',
+            ]
+    }
 )
+
