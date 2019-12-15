@@ -40,11 +40,6 @@ def main():
 
     for filename in poly_iglob(args.filenames):
 
-        if args.store_dat:
-            requested_spectra = {}
-        else:
-            requested_spectra = None
-
         normalization = normalize_args(filename, args)
 
         if args.plot:
