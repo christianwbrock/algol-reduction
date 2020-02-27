@@ -10,7 +10,7 @@ with open(path.join(here, 'index.rst'), encoding='utf-8') as f:
 
 setup(
     name='algol_reduction',
-    version='1.0.0b5',
+    version='1.0.0b6',
     description='Spectral reduction package',
     long_description=long_description,
     author='Christian W. Brock',
@@ -49,6 +49,7 @@ setup(
                 'normalize_spectrum=reduction.scripts.normalize_spectrum:main',
                 'plan_observations=reduction.scripts.plan_observations:main',
                 'generate_report=reduction.scripts.generate_report:main',
+                'fit_three_voigts=reduction.utils.fit_h_alpha:main',
             ]
     }
 )
