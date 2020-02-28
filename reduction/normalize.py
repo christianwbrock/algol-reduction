@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 
 from reduction.instrument import convolve_with_gauss
 from reduction.spectrum import Spectrum, find_minimum
-from reduction.utils.ranges import closed_range, LebesgueSet
+from reduction.utils.ranges import closed_range, union_of_ranges, LebesgueSet
 
 logger = logging.getLogger(__name__)
 
@@ -315,11 +315,11 @@ def normalize_args(spectrum, args, cut=15):
         continuum_ranges &= closed_range(ref_spectrum.xmin, ref_spectrum.xmax)
 
     if args.ranges:
-        continuum_ranges &= _list_to_set(args.ranges)
+        continuum_ranges &= union_of_ranges(args.ranges)
 
     # BUG: does not work with two entries like -C 1 2 -C 3 4
     if args.non_ranges:
-        continuum_ranges &= ~ _list_to_set(args.non_ranges)
+        continuum_ranges &= ~ union_of_ranges(args.non_ranges)
 
     ref_ys = ref_spectrum(xs) if ref_spectrum else None
 
@@ -340,26 +340,6 @@ def _ranges_to_mask(xs, ranges):
 
     else:
         return np.full(len(xs), fill_value=True, dtype=bool)
-
-
-def _list_to_set(lst):
-    """
-    convert a list of range boundaries to a LebesgueSet
-    """
-
-    if isinstance(lst, LebesgueSet):
-        return lst
-
-    assert not lst or np.ndim(lst) == 2
-    assert not lst or np.shape(lst)[1] >= 2
-
-    result = None
-
-    for lower, upper in lst:
-        item = closed_range(lower, upper)
-        result = result | item if result else item
-
-    return result
 
 
 def normalize(xs, ys, ref_ys, degree_or_range, continuum_ranges):
