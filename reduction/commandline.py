@@ -5,6 +5,7 @@ Collections of tools helpful to implement __main__ methods.
 from typing import Iterable
 from argparse import ArgumentParser
 from logging import Logger
+from astropy.coordinates import EarthLocation
 
 # -------------------- verbose --------------------
 verbose_parser = ArgumentParser(add_help=False)
@@ -140,7 +141,6 @@ def time_delta_parser(prefix, description=None, default=None):
 
     return res
 
-
 def get_time_from_args(args, prefix, required=True):
     """
     Create an astropy.time.Time value from argument crated via time_parser.
@@ -215,3 +215,76 @@ def get_time_delta_from_args(args, prefix, required=True):
         return TimeDelta(val, val2, format=format_, scale=scale)
 
     return None
+
+
+# --------- arguments passed to astropy SkyCoord -----
+def sky_coordinate_parser(description=None, default=None):
+    """
+    Some times one wants to ask the user for a star or it's coordinate.
+
+    :param prefix: prefix for the arguments
+    :param description: Is shown as argument group description
+    :param default: name or tupel
+    :return: an argument parser
+    """
+    description = description or "Arguments to create an from astropy.coordinates.SkyCoord"
+
+    parser = ArgumentParser(add_help=False)
+
+    sky_coord = parser.add_mutually_exclusive_group(required=True)
+    sky_coord.add_argument('--target-name', type=str, metavar='str',
+                           help='Try to load target coordinate using name, e.g. Algol, DelCep or M42',
+                           default=(None if isinstance(default, str) else default))
+    sky_coord.add_argument('--sky-coord', type=str, nargs=2, metavar=('ra', 'dec'),
+                           help='Sky coordinates of target, e.g. 330d 5d',
+                           default=default if isinstance(default, str) else None)
+
+    return parser
+
+
+def get_sky_coord_from_args(args):
+    from astropy.coordinates import SkyCoord
+    if args.target_name:
+        target = SkyCoord.from_name(args.target_name)
+    else:
+        assert args.sky_coord
+        target = SkyCoord(*args.sky_coord)
+    return target
+
+
+def earth_location_parser():
+    """
+    Some times one wants to ask for the observer location.
+
+    :param default: default for earth coordinate
+    :return: an argument parser
+    """
+    from astropy.coordinates import EarthLocation
+
+    parser = ArgumentParser(add_help=False)
+
+    earth_coord = parser.add_mutually_exclusive_group(required=False)
+    earth_coord.add_argument('--observatory', type=str, metavar='name',
+                             help='Try to load observer location using observatory name')
+    earth_coord.add_argument('--address', type=str, metavar='str',
+                             help='Try to load observer location using this address string (astropy>=3.1.1)')
+    earth_coord.add_argument('--earth-coord', type=str, nargs=2, metavar=('long', 'lat'),
+                             help='Earth coordinates of observer (default: %(default)s)')
+
+    return parser
+
+
+def get_earth_location_from_args(args, default=EarthLocation.of_site('Greenwich')):
+
+    if args.observatory:
+        location = EarthLocation.of_site(args.observatory)
+    elif args.address:
+        location = EarthLocation.of_address(args.address)
+    elif args.earth_coord:
+        location = EarthLocation(*args.earth_coord)
+    elif default:
+        return default
+    else:
+        SystemExit("Missing arguments for --observatory, --address or --earth-coord")
+
+    return location

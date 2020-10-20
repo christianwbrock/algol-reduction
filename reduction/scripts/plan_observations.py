@@ -14,6 +14,8 @@ from astropy.time import Time
 from icalendar import Calendar, Event
 
 from reduction.commandline import time_parser, get_time_from_args, time_delta_parser, get_time_delta_from_args
+from reduction.commandline import sky_coordinate_parser, get_sky_coord_from_args
+from reduction.commandline import earth_location_parser, get_earth_location_from_args
 from reduction.commandline import verbose_parser, get_loglevel
 from reduction.stars.variable_stars import RegularVariableObject
 
@@ -312,7 +314,9 @@ def main():
     parser = ArgumentParser(parents=[verbose_parser, time_parser('start', default=noon.isot),
                                      time_parser('end', default=(noon + 366 * u.day).isot),
                                      time_parser('epoch'),
-                                     time_delta_parser('period')],
+                                     time_delta_parser('period'),
+                                     sky_coordinate_parser(),
+                                     earth_location_parser()],
                             fromfile_prefix_chars='@',
                             description='Plan observations for a possibly variable star.')
 
@@ -320,18 +324,6 @@ def main():
                         help='output file name (default: %(default)s)')
     parser.add_argument('--entry-prefix', type=str, metavar='str',
                         help='Begin of each calendar entry (default: target name or sky coordinates)')
-    sky_coord = parser.add_mutually_exclusive_group(required=True)
-    sky_coord.add_argument('--target-name', type=str, metavar='str',
-                           help='Try to load target coordinate using name, e.g. Algol, DelCep or M42')
-    sky_coord.add_argument('--sky-coord', type=str, nargs=2, metavar=('ra', 'dec'),
-                           help='Sky coordinates of target, e.g. 330d 5d')
-    earth_coord = parser.add_mutually_exclusive_group(required=True)
-    earth_coord.add_argument('--observatory', type=str, metavar='name',
-                             help='Try to load observer location using observatory name')
-    earth_coord.add_argument('--address', type=str, metavar='str',
-                             help='Try to load observer location using this address string (astropy>=3.1.1)')
-    earth_coord.add_argument('--earth-coord', type=str, nargs=2, metavar=('long', 'lat'), default=('+13.0', '51.0'),
-                             help='Earth coordinates of observer (default: %(default)s)')
     parser.add_argument('--phase', dest='phases', nargs=2, type=float, metavar=('min', 'max'), action='append',
                         help='Desired phase of the variable star. '
                              'If absent, all phases are shown. '
@@ -356,21 +348,11 @@ def main():
 
     assert epoch and period or not epoch and not period
 
-    if args.target_name:
-        target = SkyCoord.from_name(args.target_name)
-    else:
-        assert args.sky_coord
-        target = SkyCoord(*args.sky_coord)
+    target = get_sky_coord_from_args(args)
 
     star_name = args.entry_prefix or args.target_name or "ra=%s dec=%s" % (target.frame.ra, target.frame.dec)
 
-    if args.observatory:
-        location = EarthLocation.of_site(args.observatory)
-    elif args.address:
-        location = EarthLocation.of_address(args.address)
-    else:
-        assert args.earth_coord
-        location = EarthLocation(*args.earth_coord)
+    location = get_earth_location_from_args(args)
 
     sun_horizon = -1 * args.sun_below * u.degree
     star_horizon = +1 * args.star_above * u.degree
