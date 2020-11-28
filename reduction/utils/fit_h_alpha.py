@@ -73,7 +73,7 @@ def main():
             ax.set_ylim(-0.1, 1.1)
             ax.legend()
             plt.show()
-            fig.clear()
+            # fig.clear()
 
         if csv_file:
             csv_file.close()
