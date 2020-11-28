@@ -52,7 +52,7 @@ def main():
 
         file_basename = basename(filename)
         if csv_file:
-            csv_file.write(f'{file_basename}\t{absorption}\t{err}')
+            csv_file.write(f'{file_basename}\t{absorption}\t{err}\n')
 
         if args.plot:
             fig, ax = plt.subplots()
@@ -75,8 +75,8 @@ def main():
             plt.show()
             # fig.clear()
 
-        if csv_file:
-            csv_file.close()
+    if csv_file:
+        csv_file.close()
 
 
 def _arg_parser():

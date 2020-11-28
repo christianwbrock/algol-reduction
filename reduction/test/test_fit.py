@@ -39,6 +39,24 @@ def test_fit_wega_aic():
     main()
 
 
+def test_store_csv(tmpdir):
+    filename = '../../data/Wega_2017_07_21_01-noh2o-norm.fit'
+    filename = os.path.join(os.path.dirname(__file__), filename)
+
+    txt = tmpdir.join('hello.txt')
+    sys.argv = ['dummy', filename, filename, '--num-profiles', '2', '-c', '6530', '6620', '-C', '6586', '6590',
+                '--store-csv', str(txt), '--dont-plot']
+    main()
+
+    lines = open(txt).readlines()
+    assert len(lines) == 2
+    for line in lines:
+        name, abs, err = line.split()
+        assert name == os.path.basename(filename)
+        assert float(abs)
+        assert float(err)
+
+
 def test_fit_help():
     sys.argv = ['dummy', '--help']
     with pytest.raises(SystemExit):
