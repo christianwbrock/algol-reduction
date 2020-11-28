@@ -1,6 +1,9 @@
 Welcome to reduction's documentation!
 =====================================
 
+*Note: currently scipy dependency is restricted to version 1.4.1.
+Versions 1.5.0 to 1.5.4 contain a bug in the fitting algorithms.*
+
 This library was created to apply doppler tomography to the Algol star system.
 This is still the main purpose for most of the code.
 

@@ -10,7 +10,7 @@ with open(path.join(here, 'index.rst'), encoding='utf-8') as f:
 
 setup(
     name='algol_reduction',
-    version='1.0.0b10',
+    version='1.0.0b11',
     description='Spectral reduction package',
     long_description=long_description,
     author='Christian W. Brock',
@@ -26,7 +26,7 @@ setup(
     install_requires=[
         'matplotlib',
         'numpy',
-        'scipy',
+        'scipy==1.4.1',  # there is a bug in 1.5.0 .. 1.5.4 in fitting
         'astropy>=3.2.2',
         'astroplan>=0.6',
         'icalendar'
