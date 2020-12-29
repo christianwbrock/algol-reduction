@@ -52,7 +52,7 @@ def main():
 
         file_basename = basename(filename)
         if csv_file:
-            csv_file.write(f'{file_basename}\t{absorption}\t{err}\n')
+            csv_file.write(f'{file_basename}\t{absorption}\t{err}\t{fitted_model[1].x_0.value}\t{spectrum.obs_date.isot}\n')
 
         if args.plot:
             fig, ax = plt.subplots()

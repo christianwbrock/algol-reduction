@@ -51,10 +51,11 @@ def test_store_csv(tmpdir):
     lines = open(txt).readlines()
     assert len(lines) == 2
     for line in lines:
-        name, abs, err = line.split()
+        name, abs, err, h_alpha, date_obs = line.split()
         assert name == os.path.basename(filename)
-        assert float(abs)
-        assert float(err)
+        assert float(abs) > 0
+        assert float(err) > 0
+        assert 6560.0 <= float(h_alpha) <= 6566.0
 
 
 def test_fit_help():
