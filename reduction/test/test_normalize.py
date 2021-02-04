@@ -2,8 +2,10 @@ import os.path
 
 import matplotlib
 import pytest
+from pytest import approx
 
 from reduction.normalize import normalization_parser, normalize_args, normalize
+from reduction.utils.ranges import closed_range
 
 matplotlib.use('agg')  # disable plot windows
 
@@ -57,3 +59,26 @@ def test_synthetic_data():
     # plot = plt.figure().add_subplot(111)
     # normalization.plot(plot)
     # plt.show()
+
+
+def test_sine():
+    import numpy as np
+
+    xs = np.linspace(0, 30, 301)
+    ref = 2 + np.sin(xs)
+
+    err = 0.05
+    scale = 3
+    ys = scale * ref + np.random.normal(0, err, len(xs))
+    bad = closed_range(17, 22)
+    ys[[x in bad for x in xs]] = 12.0
+
+    normalization = normalize(xs, ys, ref, range(0, 4), ~bad)
+
+    assert normalization.deg == 0
+    assert normalization.params[0] == approx(scale, rel=0.1)
+
+    from matplotlib import pyplot as plt
+    plot = plt.figure().add_subplot(111)
+    normalization.plot(plot)
+    plt.show()

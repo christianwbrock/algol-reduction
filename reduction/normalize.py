@@ -127,9 +127,12 @@ class Normalization:
             plot.set_xlim(xlim)
             plot.set_ylim(self.__get_ylim(1.3, xlim, self.xs, self.ys, self.ref_ys))
 
-            if self.continuum_ranges and self.continuum_ranges.is_bounded():
+            if self.continuum_ranges:  # and self.continuum_ranges.is_bounded():
                 for r in self.continuum_ranges.intervals():
-                    plot.axvspan(r[0], r[1], alpha=0.25)
+                    # cut infinite ranges at xlim
+                    r_0 = max(r[0], xlim[0])
+                    r_1 = min(r[1], xlim[1])
+                    plot.axvspan(r_0, r_1, alpha=0.25)
 
             plot.plot(self.xs, self.ys, label='meas')
 
@@ -301,15 +304,6 @@ def normalize_args(spectrum, args, cut=15):
 
     ys /= np.nanmax(ys)
 
-    if args.center_minimum and ref_spectrum:
-        min_spectrum = find_minimum(Spectrum.from_arrays(xs, ys), *args.center_minimum)
-        min_ref = find_minimum(ref_spectrum, *args.center_minimum)
-
-        redshift = min_spectrum - min_ref
-        if redshift:
-            logger.info(f'Apply redshift of {redshift} tro reference spectrum')
-            ref_spectrum = Spectrum.from_arrays(ref_spectrum.xs + redshift, ref_spectrum.ys)
-
     continuum_ranges = closed_range(np.nanmin(xs), np.nanmax(xs))
     if ref_spectrum:
         continuum_ranges &= closed_range(ref_spectrum.xmin, ref_spectrum.xmax)
@@ -317,9 +311,20 @@ def normalize_args(spectrum, args, cut=15):
     if args.ranges:
         continuum_ranges &= union_of_ranges(args.ranges)
 
-    # BUG: does not work with two entries like -C 1 2 -C 3 4
     if args.non_ranges:
         continuum_ranges &= ~ union_of_ranges(args.non_ranges)
+
+    if args.center_minimum and ref_spectrum:
+        min_spectrum = find_minimum(Spectrum.from_arrays(xs, ys), *args.center_minimum)
+        min_ref = find_minimum(ref_spectrum, *args.center_minimum)
+
+        redshift = min_spectrum - min_ref
+        if redshift:
+            logger.info(f'Apply redshift of {redshift} to reference spectrum')
+            ref_spectrum = Spectrum.from_arrays(ref_spectrum.xs + redshift, ref_spectrum.ys)
+
+            logger.info(f'Apply redshift of {redshift} to continuum ranges')
+            continuum_ranges >>= redshift
 
     ref_ys = ref_spectrum(xs) if ref_spectrum else None
 

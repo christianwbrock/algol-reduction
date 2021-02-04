@@ -82,3 +82,13 @@ def test_contains():
     assert 1.5 in a
     assert 2.0 in a
     assert nextafter(2, 3) not in a
+
+
+def test_shifts():
+    a = closed_range(1, 2)
+
+    assert a >> 2 == closed_range(3, 4)
+    assert a << 2 == closed_range(-1, 0)
+
+    a >>= 2
+    assert a == closed_range(3, 4)

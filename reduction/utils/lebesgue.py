@@ -148,6 +148,15 @@ class LebesgueSet(object):
         for i, x in enumerate(self.points):
             yield (x, -1 if (infinite ^ (i & 1)) else 1)
 
+    def __lshift__(self, offset):
+        """This of it as a blue shift toward shorter wavelengths"""
+        return self >> (-offset)
+
+    def __rshift__(self, offset):
+        """This of it as a red  shift toward longer wavelengths"""
+        points = [point + offset for point in self.points]
+        return LebesgueSet(points, left_infinite=self.left_infinite, fast=True)
+
     @classmethod
     def operate(cls, op, family):
         """Compute the union, intersection or xor of a family of sets.
