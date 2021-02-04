@@ -41,7 +41,7 @@ def main():
                                        args.max_wavelength_window, args.max_fwhm)
 
         for n, v in zip(fitted_model.param_names, fitted_model.parameters):
-            logger.info(f'{n} = {v}')
+            logger.info('{%s} = {%s}' % (n, v))
 
         # diffs between astropy 3.* and 4.0
         n_submodels = fitted_model.n_submodels() if callable(fitted_model.n_submodels) else fitted_model.n_submodels
@@ -52,11 +52,12 @@ def main():
 
         file_basename = basename(filename)
         if csv_file:
-            csv_file.write(f'{file_basename}\t{absorption}\t{err}\t{fitted_model[1].x_0.value}\t{spectrum.obs_date.isot}\n')
+            csv_file.write('%s\t%s\t%s\t%s\t%s\n' %
+                           (file_basename, absorption, err, fitted_model[1].x_0.value, spectrum.obs_date.isot))
 
         if args.plot:
             fig, ax = plt.subplots()
-            ax.set_title(f'{file_basename}; absorption=${absorption:.2f} \\pm {err:.2f} \\AA$')
+            ax.set_title('%s; absorption=$%.2f \\pm %.2f \\AA$' % (file_basename, absorption, err))
             ax.plot(spectrum.xs, spectrum.ys, label='spectrum')
             ax.plot(spectrum.xs, fitted_model(spectrum.xs), label='fit')
 
@@ -109,8 +110,8 @@ def _arg_parser():
 
 
 def _label_of(model):
-    params = f"{', '.join((f'{k}={v:.3g}' for k, v in zip(model.param_names, model.parameters)))}"
-    return f"{model.__class__.__name__}({params})"
+    params = ', '.join((('%s=%.3g' % (k, v)) for k, v in zip(model.param_names, model.parameters)))
+    return "%s(%s)" % (model.__class__.__name__, params)
 
 
 def _create_model(num_profiles, fix_continuum, center_wavelength, max_wavelength_window, max_fwhm):

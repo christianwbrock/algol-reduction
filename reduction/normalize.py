@@ -215,7 +215,7 @@ class Normalization:
         hdr.append(('HISTORY', 'Normalized w/ algol-reduction.'), end=True)
         hdr.append(('NORM_DEG', len(self.params) - 1), end=True)
         for i in range(self.polynomial.order):
-            hdr.append((f'NORM_CO{i}', self.params[i]), end=True)
+            hdr.append(('NORM_CO%d' % i, self.params[i]), end=True)
 
         hdr.set(keyword='BITPIX', value=-32)  # the value for float32
         hdr.set(keyword='NAXIS', value=1)
@@ -320,10 +320,10 @@ def normalize_args(spectrum, args, cut=15):
 
         redshift = min_spectrum - min_ref
         if redshift:
-            logger.info(f'Apply redshift of {redshift} to reference spectrum')
+            logger.info('Apply redshift of %s to reference spectrum' % redshift)
             ref_spectrum = Spectrum.from_arrays(ref_spectrum.xs + redshift, ref_spectrum.ys)
 
-            logger.info(f'Apply redshift of {redshift} to continuum ranges')
+            logger.info('Apply redshift of %s to continuum ranges' % redshift)
             continuum_ranges >>= redshift
 
     ref_ys = ref_spectrum(xs) if ref_spectrum else None

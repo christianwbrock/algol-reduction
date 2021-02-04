@@ -79,7 +79,8 @@ def main():
 
     if csv_file:
         for i in range(len(times)):
-            csv_file.write(f'{times[i]}\t{phases[i]}\t{absorption[i]}\t{errors[i]}\t{delta_v[i]}\t{wavelength[i]}\n')
+            csv_file.write('%s\t%s\t%s\t%s\t%s\t%s\n' %
+                           (times[i], times[i], absorption[i], errors[i], delta_v[i], wavelength[i]))
 
         csv_file.close()
 
