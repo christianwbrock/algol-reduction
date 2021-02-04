@@ -293,7 +293,7 @@ class Spectrum:
             obs_date = Time(date_obs, format='isot')
 
         elif date_obs and len(date_obs) == len('2017-01-01') \
-                and hdr.get('TIME-OBS') and len(hdr.get('TIME-OBS') == len('17:55:22')):
+                and hdr.get('TIME-OBS') and len(hdr.get('TIME-OBS')) == len('17:55:22'):
             logger.warning('field "DATE-OBS" contains only the date, no time')
             obs_date = Time(date_obs + 'T' + hdr.get('TIME-OBS'), format='isot')
 
