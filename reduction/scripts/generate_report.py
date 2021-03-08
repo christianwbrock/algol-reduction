@@ -471,8 +471,8 @@ def plot_diff(args_cmap, args_output, diff_image_name, diffs_by_phase, disc_rang
             if 0.15 <= diff.phase <= 0.85:
                 for x, y in diff.maxima:
                     if x < H_ALPHA.value:
-                        left_xs.append(x)
                         left_ys.append(diff.phase)
+                        left_xs.append(x)
                     else:
                         right_xs.append(x)
                         right_ys.append(diff.phase)

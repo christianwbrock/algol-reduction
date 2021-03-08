@@ -118,9 +118,9 @@ def main():
                          axesB=plot_223, xyB=(0.97, 0.2), coordsB='axes fraction',
                          arrowstyle='simple', color='r', mutation_scale=30, figure=fig, zorder=3)
 
-    plot_223.add_artist(p1)
-    plot_223.add_artist(p2)
-    plot_223.add_artist(p3)
+    fig.add_artist(p1)
+    fig.add_artist(p2)
+    fig.add_artist(p3)
 
     plt.show()
 

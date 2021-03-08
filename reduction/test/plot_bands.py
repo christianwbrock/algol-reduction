@@ -32,11 +32,11 @@ def main():
     plot = fig.add_subplot(111)
     plot.set_title('Photometric spectrum')
 
-    xmin = 300
+    xmin = np.min([b.mu - b.fwhm for b in data if b.mu and b.fwhm])
     if False:
         xmax = 1000
     else:
-        xmax = 22000
+        xmax = np.max([b.mu - b.fwhm for b in data if b.mu and b.fwhm])
         plot.set_xscale('log')
 
     xs = np.arange(xmin, xmax, 1)
