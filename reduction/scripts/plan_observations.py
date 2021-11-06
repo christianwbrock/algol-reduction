@@ -91,7 +91,7 @@ def _get_time_above_horizon(observer, start_time, end_time, target_coordinate, h
     else:
         dusk = observer.target_rise_time(start_time, target_coordinate, which='next', horizon=horizon)
         if dusk.mask:
-            return [[]]
+            return []
 
     dawn = observer.target_set_time(dusk, target_coordinate, which='next', horizon=horizon)
     if dawn.mask:
