@@ -1,101 +1,76 @@
 #!python
 # -*- coding: utf-8 -*-
 """
-Display 1d fits data i.g. a spectrum via matplotlib
+Display 2d fits data i.g. a spectrum via matplotlib
 """
-
-from reduction.spectrum import Spectrum
-from reduction.commandline import poly_glob, filename_parser, get_loglevel, verbose_parser
-
-import numpy as np
-
-import matplotlib.pyplot as plt
-
-from typing import List
-
-from argparse import ArgumentParser
-import os.path
-
+import glob
 import logging
+import os
+from argparse import ArgumentParser
+
+import matplotlib
+from astropy.io import fits
+from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from reduction.commandline import filename_parser, get_loglevel, verbose_parser
 
 logger = logging.getLogger(__name__)
 
 
-def show_file(filename: str, normalize: bool, xrange: List[float], label: str, axes):
-
-    spectra = Spectrum.load(filename, slice(None))
-
-    if not isinstance(spectra, list):
-        spectra = [spectra]
-
-    for spectrum in spectra:
-
-        x = np.copy(spectrum.xs)
-        y = np.copy(spectrum.ys)
-
-        if xrange:
-            mask = [xrange[0] <= x <= xrange[1] for x in x]
-
-            if np.any(mask):
-                x = x[mask]
-                y = y[mask]
-            else:
-                logger.error("ignore file %s where parameter all_range=%s is outsize data range=%s",
-                             filename, xrange, [x[0], x[-1]])
-                return
-
-        if normalize:
-            y /= max(y)
-
-        axes.plot(x, y, label=label)
-        axes.set_xlabel('Wavelength')
-
-
-def plot_many_files(args):
-    fig = plt.figure()
-    ax = None
-
-    filenames = poly_glob(args.filenames)
-    if not filenames:
-        raise SystemExit("%s did not yield any filenames." % args.filenames)
-
-    for i, filename in enumerate(sorted(filenames), start=1):
-
-        logger.info("display %s", filename)
-
-        if args.merge:
-            ax = ax or fig.add_subplot(1, 1, 1)
-        else:
-            ax = fig.add_subplot(len(filenames), 1, i)
-
-        if args.all_range:
-            ax.set_xlim(args.all_range)
-
-        label = os.path.basename(filename)
-        show_file(filename, args.normalize, args.all_range, label, ax)
-
-        if not args.merge and not args.no_legend:
-            ax.legend()
-
-    if args.merge and not args.no_legend:
-        plt.legend()
-
-
 def main():
-    parser = ArgumentParser(description='Plot one or more spectrum files.',
-                            parents=[filename_parser('spectrum'), verbose_parser])
-    parser.add_argument('--all-range', nargs=2, type=float, metavar=('min', 'max'), help='limit the plots x-range')
-    parser.add_argument('--merge', '-m', default=False, action='store_true', help='show all spectra in a single plot')
-    parser.add_argument('--normalize', '-n', default=False, action='store_true',
-                        help='divide all spectra by their maximum value')
-    parser.add_argument('--no-legend', action='store_true', help='do not display plot legend')
+    parser = ArgumentParser(description='Plot one or more fits image files.',
+                            parents=[filename_parser('image'), verbose_parser])
+    parser.add_argument('--show-colorbar', dest='show_colorbar', default=False, action='store_true',
+                        help="show image colorbar (default: False)")
+    parser.add_argument('--dont-show-colorbar', dest='show_colorbar', default=False, action='store_false',
+                        help="don't show image colorbar")
 
     args = parser.parse_args()
-
     logging.basicConfig(level=(get_loglevel(logger, args)))
 
-    plot_many_files(args)
+    for filename in _multi_glob(args.filenames):
+
+        with fits.open(filename) as hdu_list:
+            images = [hdu.data for hdu in hdu_list if hdu.header.get("NAXIS", 0) == 2]
+            if not images:
+                logging.error(f"{filename} contains no images")
+
+            for image in images:
+                _display_image(filename, image, args.show_colorbar)
+
+
+def _display_image(filename, image, show_colorbar):
+    row_count, column_count = image.shape
+    dpi = 300
+
+    row_inches = (row_count + dpi - 1) // dpi
+    column_inches = (column_count + dpi - 1) // dpi
+
+    fig = plt.figure(figsize=(column_inches, row_inches), dpi=dpi)
+    fig.canvas.manager.set_window_title(os.path.basename(filename))
+
+    ax = fig.add_subplot()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    im = ax.imshow(image, cmap=matplotlib.cm.gray)
+    if show_colorbar:
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        plt.colorbar(im, cax=cax)
+
+    fig.tight_layout(pad=0)
     plt.show()
+    plt.close(fig)
+
+
+def _multi_glob(filenames):
+    result = []
+    for pattern in filenames:
+        result.extend(glob.glob(pattern))
+
+    return result
 
 
 if __name__ == '__main__':
