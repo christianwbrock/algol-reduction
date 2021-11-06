@@ -80,7 +80,7 @@ def main():
     if csv_file:
         for i in range(len(times)):
             csv_file.write('%s\t%s\t%s\t%s\t%s\t%s\n' %
-                           (times[i], times[i], absorption[i], errors[i], delta_v[i], wavelength[i]))
+                           (times[i], phases[i], absorption[i], errors[i], delta_v[i], wavelength[i]))
 
         csv_file.close()
 
