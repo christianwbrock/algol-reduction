@@ -8,5 +8,6 @@ reduction.egg-info/
 .pytest_cache
 bin/output/
 doc/html/
+venv
 
 
