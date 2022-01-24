@@ -1,0 +1,13 @@
+--degree
+2
+--ref
+CONV_R28_L6562.81_W100._S-8.2_C_s29180g4.02z0.0t5.0_a0.00c-0.06n0.18o-0.01_Mdot-8.79Vinfty2805beta1.0finfty1.0vcl0_VIS.spec
+--convolve-reference
+0.5
+--center-minimum
+6560
+6566
+1
+--non-continuum-range
+6544.5
+6586
