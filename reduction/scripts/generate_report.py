@@ -1,38 +1,29 @@
-#!python
-# -*- coding: utf-8 -*-
-"""
-Given a single spectrum, display all x-ranges within [0.99 y-max .. ymax]
+"""\
+Generate LaTeX report displaying spectra normalized around the H_alpha line.
 """
 
+import logging
 import os
 import os.path
-from collections import namedtuple, defaultdict
 from argparse import ArgumentParser
-import logging
+from collections import namedtuple, defaultdict
 
 import numpy as np
-
-from matplotlib import pyplot as plt
-from matplotlib import cm
-from matplotlib import rcParams as plot_params
-
 from astropy import constants as const
-from astropy import units as u
-from astropy.coordinates import EarthLocation
 from astropy.convolution import Box1DKernel
 from astropy.convolution import convolve
-from astropy.modeling.fitting import SimplexLSQFitter
+from astropy.coordinates import EarthLocation
+from matplotlib import cm
+from matplotlib import pyplot as plt
+from matplotlib import rcParams as plot_params
 
-from reduction.commandline import poly_glob, filename_parser, verbose_parser, get_loglevel
 from reduction.algol_h_alpha_line_model import AlgolHAlphaModel
-from reduction.spectrum import Spectrum
-from reduction.stars.algol import Algol, algol_coordinate
+from reduction.commandline import poly_glob, filename_parser, verbose_parser, get_loglevel
 from reduction.constants import H_ALPHA
 from reduction.normalize import normalize
+from reduction.spectrum import Spectrum
+from reduction.stars.algol import Algol, algol_coordinate
 from reduction.utils.ranges import closed_range
-
-from reduction.nan_statistics import nan_leastsquare
-
 
 logger = logging.getLogger(__name__)
 
@@ -43,26 +34,24 @@ def main():
 
     plot_params['figure.dpi'] = 150
 
+    # TODO comment
     max_diff = 0.25
+
+    # range around H_alpha in A to be ignored for spectrum normalization
     padding = 10.0
 
     disc_range = closed_range(H_ALPHA.value - padding, H_ALPHA.value + padding)
     continuum_ranges = closed_range(6520, 6610) & ~disc_range
 
     parser = ArgumentParser(parents=[filename_parser('spectrum'), verbose_parser],
-                            description='Generate LaTeX report displaying spectrums normalized around the Halpha line.')
+                            description='Generate LaTeX report displaying spectra normalized around the H_alpha line.')
 
-    parser.add_argument('-o', '--output', type=str, default='output')
-    parser.add_argument('-f', '--force', action='store_true')
-
-    parser.add_argument('--fit-sigma', action='store_true',
-                        help='Modify model stddev to fit best data')
-    parser.add_argument('--fit-redshift', action='store_true',
-                        help='Modify model redshift to best fit data')
-
+    parser.add_argument('-o', '--output', type=str, default='output',
+                        help='output folder where TeX file and images are stored')
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='Use this option to remove an existing output folder.')
     parser.add_argument('--deg', type=int, default=3,
                         help='Degree of the normalization polynomial (default: %(default)s)')
-
     parser.add_argument('--cmap', default='bwr',
                         help='A valid matplotlib colormap name (default: %(default)s)')
 
@@ -125,6 +114,7 @@ def main():
 
     filenames = poly_glob(args.filenames)
 
+    # pass #1 loads all spectra found in the command line arguments
     spectra = []
     for n, filename in enumerate(filenames, start=1):
 
@@ -142,6 +132,8 @@ def main():
     prev_observer = None
     prev_day = None
 
+    # pass #2
+    # group all spectra by observer and date
     for n, spectrum in enumerate(sorted(spectra, key=lambda sp: (sp.observer, sp.obs_date)), start=1):
 
         logger.info("pass2 %d/%d: %s", n, len(spectra), spectrum.short_name)
@@ -159,9 +151,11 @@ def main():
         xs = spectrum.xs
         ys = spectrum.ys
 
+        # cut first and last 15 values which may contain invalid (zero) values
         xs = xs[15:-15]
         ys = ys[15:-15]
 
+        # normalize the maximum value to 1
         ys = ys / ys.max()
 
         obs_time = spectrum.obs_date
@@ -174,65 +168,51 @@ def main():
         algol_rv_a = algol.rv_A(obs_time)
         radial_velocity_correction = algol_coordinate.radial_velocity_correction(obstime=obs_time,
                                                                                  location=observer_location)
-        rv_predicted = algol_rv_a - radial_velocity_correction
+        rv_predicted_a = algol_rv_a - radial_velocity_correction
         phase = algol.AB.phase(obs_time)
 
         def as_redshift(radial_velocity):
             return H_ALPHA * (radial_velocity / const.c).to(1)
 
-        redshift_predicted = as_redshift(rv_predicted)
-        redshift_from_data = u.Quantity(_find_minimum(xs, ys, spectrum.dx, 10, 1.5), u.AA) - H_ALPHA
+        redshift_predicted_a = as_redshift(rv_predicted_a)
 
+        # 2.354 is the scale between sigma and FWHM of a gaussian
         sigma = H_ALPHA / (res or 15000) / 2.354
 
-        initial_model = AlgolHAlphaModel(redshift=redshift_from_data, sigma=sigma)
-        initial_model.scale.fixed = True
-        initial_model.redshift.fixed = not args.fit_redshift
-        initial_model.sigma.fixed = not args.fit_sigma
+        model_algol_a = AlgolHAlphaModel(redshift=redshift_predicted_a, sigma=sigma)
+        model_algol_a.scale.fixed = True
+        model_algol_a.redshift.fixed = True
+        model_algol_a.sigma.fixed = True
 
-        normalization = normalize(xs, ys, ref_ys=initial_model(xs), degree_or_range=args.deg, continuum_ranges=continuum_ranges)
+        # TODO: calculate algol spectrum from the single spectra of components A, B and C
+        # model_algol_b = AlgolHAlphaModel(redshift=redshift_predicted_b, sigma=sigma)
+        # model_algol_c = AlgolHAlphaModel(redshift=redshift_predicted_c, sigma=sigma)
+
+        # part_a, part_b, part_c = (1, 0, 0)
+        # model_algol = part_a * model_algol_a + part_b * model_algol_b + part_c * model_algol_c
+
+        normalization = normalize(xs, ys, ref_ys=model_algol_a(xs), degree_or_range=args.deg,
+                                  continuum_ranges=continuum_ranges)
 
         normalized = normalization.norm
         snr = normalization.snr
         normalization.plot(plt.figure().add_subplot(111))
 
-        image_norm1 = "%05d_norm1.png" % n
-        plt.title("Normalization: %s" % initial_model)
-        plt.savefig(os.path.join(args.output, image_norm1))
+        image_normalized = "%05d_norm1.png" % n
+        plt.title("Normalization: %s" % model_algol_a)
+        plt.savefig(os.path.join(args.output, image_normalized))
         plt.close()
-
-        if args.fit_sigma or args.fit_redshift:
-
-            fitter = SimplexLSQFitter()
-            fitter._stat_method = nan_leastsquare
-            fitter._opt_method._maxiter = 2000
-
-            final_model = fitter(initial_model, xs, normalized, weights=np.sqrt(normalized))
-
-            logger.debug("fit info: %s", fitter.fit_info)
-
-            normalization = normalize(xs, ys, ref_ys=final_model(xs), degree_or_range=args.deg, continuum_ranges=continuum_ranges)
-
-            normalized = normalization.norm
-            snr = normalization.snr
-            normalization.plot(plt.figure().add_subplot(111))
-
-            image_norm2 = "%05d_norm2.png" % n
-            plt.title("Normalization: %s" % final_model)
-            plt.savefig(os.path.join(args.output, image_norm2))
-            plt.close()
-        else:
-            image_norm2 = None
-            final_model = initial_model
 
         image_diff = "%05d_diff.png" % n
 
-        xlim = np.asarray(final_model.get_xlimits())
+        xlim = np.asarray(model_algol_a.get_xlimits())
         xlim[0] = max(xlim[0], continuum_ranges.lower_bound())
         xlim[1] = min(xlim[1], continuum_ranges.upper_bound())
 
-        diff_xs = xs - final_model.redshift
-        diff_ys = normalized - final_model(xs)
+        # compute difference spectrum between the normalized observed and the reference spectrum
+        # This is assumed to be the spectrum of the circum stellar disc
+        diff_xs = xs - model_algol_a.redshift
+        diff_ys = normalized - model_algol_a(xs)
 
         diff_mask = [x in disc_range for x in diff_xs]
 
@@ -245,7 +225,7 @@ def main():
         if spectrum.resolution:
             snr_by_observer[spectrum.observer].append([spectrum.resolution, snr])
 
-        create_diff_plot(final_model, initial_model, normalized, maxima, spectrum.short_name, xlim, xs, ys,
+        create_diff_plot(model_algol_a, model_algol_a, normalized, maxima, spectrum.short_name, xlim, xs, ys,
                          os.path.join(args.output, image_diff))
 
         def display(q, format_string):
@@ -271,9 +251,9 @@ def main():
         tex_file.write("\\hline\n")
         tex_file.write("Algol radial velocity & %s \\\\\n" % display_rv(algol_rv_a))
         tex_file.write("Barycentric correction & %s \\\\\n" % display_rv(radial_velocity_correction))
-        tex_file.write("Final radial velocity& %s \\\\\n" % display_rv(rv_predicted))
+        tex_file.write("Final radial velocity& %s \\\\\n" % display_rv(rv_predicted_a))
         tex_file.write("\\hline\n")
-        tex_file.write("Redshift, form data & %s \\\\\n" % display(redshift_from_data.to('AA'), "%.2f"))
+        tex_file.write("Redshift, form data & %s \\\\\n" % display(redshift_predicted_a.to('AA'), "%.2f"))
         tex_file.write("\\hline\n")
         tex_file.write("\\end{tabular}\n")
         tex_file.write("\\end{center}\n")
@@ -281,18 +261,16 @@ def main():
         tex_file.write("\n")
         tex_file.write("\\includegraphics[width=\\textwidth]{%s}\n" % image_diff)
         tex_file.write("\n")
-        tex_file.write("\\includegraphics[width=\\textwidth]{%s}\n" % image_norm1)
+        tex_file.write("\\includegraphics[width=\\textwidth]{%s}\n" % image_normalized)
         tex_file.write("\n")
-        if image_norm2:
-            tex_file.write("\\includegraphics[width=\\textwidth]{%s}\n" % image_norm2)
-            tex_file.write("\n")
         tex_file.write("\\pagebreak\n")
         tex_file.write("\n")
 
-    # end spectra
+    # end pass #2 spectra
 
     diffs_by_phase = sorted(diffs_by_phase, key=lambda diff: diff.phase)
 
+    # TODO what is vmin, vmax?
     vmin = max(-max_diff, np.min([np.nanmin(diff.diff) for diff in diffs_by_phase]))
     vmax = min(+max_diff, np.max([np.nanmax(diff.diff) for diff in diffs_by_phase]))
 
@@ -304,13 +282,17 @@ def main():
 
     plot_snr_by_observer(args.output, snr_by_observer_name, snr_by_observer)
 
-    max_file = open(os.path.join(args.output, "maxima.dat"), "w")
 
     tex_file.write("\\appendix\n")
     tex_file.write("\\section{SNRs and Resolutions}\n")
     tex_file.write("\n")
     tex_file.write("\\includegraphics[width=\\textwidth]{%s}\n" % snr_by_observer_name)
     tex_file.write("\n")
+
+    # generate a txt file containing the maxima around H_alpha assumed to be hot-spots
+    # the content is also written as table to the tex file
+    max_file = open(os.path.join(args.output, "maxima.dat"), "w")
+    max_file.write("#phase,w1,v1,y1,w2,v2,y2\n")
     tex_file.write("\\section{maxima of differences}\n")
     tex_file.write("\n")
     tex_file.write("The raw date is stored in {\\tt %s}\n" % "maxima.dat")
@@ -318,7 +300,6 @@ def main():
     tex_file.write("\\begin{longtable}{|l|lll|lll|}\n")
     tex_file.write("\\hline\n")
     tex_file.write("phase & $\AA$ & $km/s$ & y & $\AA$ & $km/s$ & y \\\\\n")
-    max_file.write("#phase,w1,v1,y1,w2,v2,y2\n")
     tex_file.write("\\hline\n")
 
     for diff in diffs_by_phase:
@@ -521,6 +502,9 @@ def create_diff_plot(final_model, initial_model, normalized, maxima, title, xlim
 
 
 def _find_maxima(xs, ys, center):
+    """\
+    Find maxima of ys below and above the center wave length, i.e. H_alpha
+    """
 
     result = []
 

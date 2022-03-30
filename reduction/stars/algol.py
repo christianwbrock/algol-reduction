@@ -22,7 +22,7 @@ baron2012 = RegularVariableObject(Time(2441771.353, format='jd'), 2.867328 * u.d
                                   authority='Baron2012', coordinate=algol_coordinate)
 zavala_2010 = RegularVariableObject(Time(2441773.49, format='jd'), 2.867328 * u.day,
                                     authority='Zavala2010', coordinate=algol_coordinate)
-zavala2010_via_aaron2012 = RegularVariableObject(Time(2441771.3395, format='jd'), 2.867328 * u.day,
+zavala2010_via_baron2012 = RegularVariableObject(Time(2441771.3395, format='jd'), 2.867328 * u.day,
                                                  authority='Baron about Zavala?', coordinate=algol_coordinate)
 aavso_my = RegularVariableObject(Time(2456181.84, format='jd'), 2.86736 * u.day,
                                  authority='AAVSO my calculation', coordinate=algol_coordinate)
