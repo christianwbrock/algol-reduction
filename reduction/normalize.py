@@ -12,6 +12,11 @@ from reduction.instrument import convolve_with_gauss
 from reduction.spectrum import Spectrum, find_minimum
 from reduction.utils.ranges import closed_range, union_of_ranges, LebesgueSet
 
+try:
+    from numpy import RankWarning  # numpy < 2.0
+except ImportError:
+    from numpy.exceptions import RankWarning
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,7 +83,7 @@ class Normalization:
         xs = self.xs[self.mask]
 
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore' if self.ignore_rank_warning else 'default', category=np.RankWarning)
+            warnings.filterwarnings('ignore' if self.ignore_rank_warning else 'default', category=RankWarning)
 
             params = np.polyfit(xs, ys, self.deg)
 

@@ -56,8 +56,8 @@ class VariableObject(object):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            observer_location = (observer_location or
-                                 observation_time.location or
+            observer_location = (observer_location if observer_location is not None else
+                                 observation_time.location if observation_time.location is not None else
                                  EarthLocation.from_geocentric(0, 0, 0, u.meter))
 
         return observation_time.light_travel_time(sky_coordinate, kind='barycentric', location=observer_location)
@@ -160,4 +160,3 @@ class RegularVariableObject(VariableObject):
     def __repr__(self):
         return "%s says that epoch: %s, period: %s, pos: %s" % (
             self.authority, self.epoch, self.period, self.coordinate)
-

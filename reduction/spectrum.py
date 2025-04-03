@@ -55,7 +55,7 @@ class Spectrum:
             self.short_name += "(" + self.hdu_nbr + ")"
 
     def __call__(self, x):
-        return np.interp(x, self.xs, self.ys, left=np.NaN, right=np.NaN)
+        return np.interp(x, self.xs, self.ys, left=np.nan, right=np.nan)
 
     def __eq__(self, other):
         return self.__key() == other.__key()
