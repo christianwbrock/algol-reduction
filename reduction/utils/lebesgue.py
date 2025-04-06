@@ -24,8 +24,9 @@ In this class, infinite values are represented by using the python value Float("
 Infinite floats can be tested with math.isinf().
 """
 import itertools
-from bisect import bisect
 import operator
+from bisect import bisect
+
 
 class LebesgueSet(object):
     _inf = float('infinity')  # can be tested with math.isinf()

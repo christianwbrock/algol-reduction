@@ -41,10 +41,10 @@ class VariableObject(object):
             assert isinstance(coordinate, SkyCoord)
 
     def to_1(self, time, location=None):
-        raise NotImplemented
+        raise NotImplementedError
 
     def to_time(self, val, location=None):
-        raise NotImplemented
+        raise NotImplementedError
 
     # noinspection PyMethodMayBeStatic
     def _light_travel_time(self, observation_time: Time, sky_coordinate: SkyCoord, observer_location=None):

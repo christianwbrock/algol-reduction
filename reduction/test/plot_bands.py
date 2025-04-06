@@ -1,14 +1,14 @@
-import matplotlib.pyplot as plt
-from astropy.modeling.models import Gaussian1D
-import numpy as np
-import os.path
-
 from collections import namedtuple
+
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy.modeling.models import Gaussian1D
+
 Band = namedtuple('Band', 'name mu fwhm color')
 
 
 def main():
-    
+
     stddev_to_fwhm = np.sqrt(8 * np.log(2))
 
     data = [

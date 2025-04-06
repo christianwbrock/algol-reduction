@@ -1,11 +1,8 @@
-
-from astropy.time import Time
-from astropy.coordinates import SkyCoord, EarthLocation
-
 import astropy.units as u
+from astropy.coordinates import SkyCoord
+from astropy.time import Time
 
 from reduction.stars.variable_stars import RegularVariableObject
-
 
 # wikipedia
 skyCoord = SkyCoord('22h29m10.26502s +58d24m54.7139s')

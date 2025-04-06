@@ -7,7 +7,6 @@ import logging
 import sys
 from argparse import ArgumentParser
 
-from astropy.coordinates import SkyCoord
 from astropy.time import Time
 
 from reduction.commandline import earth_location_parser, get_earth_location_from_args
@@ -23,7 +22,7 @@ def main():
                                      earth_location_parser()],
                             description='''Run astropy.coordinates.SkyCoord.radial_velocity_correction().
                             Each line from stdin is interpreted as observation time and passed to astropy.time.Time.
-                            
+
                             The result is written to stdout.
                             It has to be interpreted as velocity toward the observer (red-shift).
                             ''')
@@ -50,7 +49,7 @@ def main():
 def _as_float(str):
     try:
         return float(str)
-    except:
+    except:  # noqa: E722
         return str
 
 

@@ -2,12 +2,9 @@
 
 """
 
-import numpy as np
 import astropy.units as u
-import astropy.constants as const
+import numpy as np
 from astropy.time import Time
-
-import matplotlib.pyplot as plt
 
 from reduction.constants import H_ALPHA
 

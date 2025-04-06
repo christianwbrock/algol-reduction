@@ -8,7 +8,7 @@ from astropy.convolution import convolve
 
 
 def test_constants():
-    algol = coord.SkyCoord('3h08.2m', '40.96d', frame='fk5')
+    _ = coord.SkyCoord('3h08.2m', '40.96d', frame='fk5')
 
 
 def test_convolve():
@@ -16,9 +16,8 @@ def test_convolve():
     kernel = Gaussian1DKernel(1, x_size=3)
 
     none = convolve(data, kernel, boundary=None)
-    fill = convolve(data, kernel, boundary='fill')
-    wrap = convolve(data, kernel, boundary='wrap')
+    _ = convolve(data, kernel, boundary='fill')
+    _ = convolve(data, kernel, boundary='wrap')
     extend = convolve(data, kernel, boundary='extend')
 
     numpy.testing.assert_equal(none.size, extend.size)
-

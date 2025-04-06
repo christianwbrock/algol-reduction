@@ -48,7 +48,7 @@ def plot_rv_by_phase(plot, funcs, epoch, period, ref_wavelength=None, points=401
         rs_min = _rf_to_rs(np.nanmin(rv_kms), ref_wavelength)
         rs_max = _rf_to_rs(np.nanmax(rv_kms), ref_wavelength)
 
-        label = '%s $[%.2f .. %.2f \AA]$' % (label, rs_min.value, rs_max.value)
+        label = '%s $[%.2f .. %.2f \\AA]$' % (label, rs_min.value, rs_max.value)
 
         plot.plot(phase, rv_kms.value, label=label)
 
@@ -56,8 +56,8 @@ def plot_rv_by_phase(plot, funcs, epoch, period, ref_wavelength=None, points=401
     plot.set_xlim(-0.02, 1.02)
 
     rv_min, rv_max = plot.get_ylim() * u.km / u.s
-    rs_min = _rf_to_rs (rv_min, ref_wavelength)
-    rs_max = _rf_to_rs (rv_max, ref_wavelength)
+    rs_min = _rf_to_rs(rv_min, ref_wavelength)
+    rs_max = _rf_to_rs(rv_max, ref_wavelength)
     addy.set_ylim(rs_min.value, rs_max.value)
 
     if show_xaxis:

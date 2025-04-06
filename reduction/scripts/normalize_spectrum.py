@@ -4,17 +4,15 @@
 Given a single spectrum, display all x-ranges within [0.99 y-max .. ymax]
 """
 
-from reduction.normalize import normalize_args, normalization_parser
-from reduction.commandline import poly_iglob, filename_parser, verbose_parser, get_loglevel
-
+import logging
 from argparse import ArgumentParser
-from matplotlib import pyplot as plt
-
 from os.path import basename
 
-import numpy as np
+from matplotlib import pyplot as plt
 
-import logging
+from reduction.commandline import poly_iglob, filename_parser, verbose_parser, get_loglevel
+from reduction.normalize import normalize_args, normalization_parser
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,6 +51,7 @@ def main():
 
         if args.store_fits:
             normalization.store_as_fits(filename, args.store_fits)
+
 
 if __name__ == '__main__':
     main()

@@ -84,7 +84,7 @@ def main():
     tex_file.write("\\maketitle\n")
     tex_file.write("\\begin{verbatim}\n")
 
-    for k,v in args.__dict__.items():
+    for k, v in args.__dict__.items():
         tex_file.write("--%s %s\n" % (k, v))
 
     tex_file.write("\\end{verbatim}\n")
@@ -139,13 +139,13 @@ def main():
         logger.info("pass2 %d/%d: %s", n, len(spectra), spectrum.short_name)
 
         if spectrum.observer != prev_observer:
-            tex_file.write("\section{%s}\n\n" % spectrum.observer)
+            tex_file.write("\\section{%s}\n\n" % spectrum.observer)
             prev_observer = spectrum.observer
             prev_day = None
 
         obs_day = spectrum.obs_date.iso[:10]
         if obs_day != prev_day:
-            tex_file.write("\subsection{%s}\n\n" % obs_day)
+            tex_file.write("\\subsection{%s}\n\n" % obs_day)
             prev_day = obs_day
 
         xs = spectrum.xs
@@ -282,7 +282,7 @@ def main():
 
     plot_snr_by_observer(args.output, snr_by_observer_name, snr_by_observer)
 
-
+    #
     tex_file.write("\\appendix\n")
     tex_file.write("\\section{SNRs and Resolutions}\n")
     tex_file.write("\n")
@@ -299,7 +299,7 @@ def main():
     tex_file.write("\n")
     tex_file.write("\\begin{longtable}{|l|lll|lll|}\n")
     tex_file.write("\\hline\n")
-    tex_file.write("phase & $\AA$ & $km/s$ & y & $\AA$ & $km/s$ & y \\\\\n")
+    tex_file.write("phase & $\\AA$ & $km/s$ & y & $\\AA$ & $km/s$ & y \\\\\n")
     tex_file.write("\\hline\n")
 
     for diff in diffs_by_phase:
@@ -362,7 +362,7 @@ def plot_sorted_diff(args_cmap, args_output, sorted_diff_image_name, diffs_by_ph
     plot = fig.add_subplot(111)
     plot.set_xlim(disc_range.lower_bound(), disc_range.upper_bound())
     plot.set_ylabel('Spectra sorted by phase')
-    plot.set_xlabel('Wavelength ($\AA$)')
+    plot.set_xlabel('Wavelength ($\\AA$)')
     sc = None
 
     left_xs = []
@@ -408,7 +408,7 @@ def plot_snr_by_observer(args_output, filename, snr_by_observer):
 
     fig = plt.figure()
     plot = fig.add_subplot(111)
-    plot.set_xlabel('Resolution $\lambda / \delta \lambda$')
+    plot.set_xlabel('Resolution $\\lambda / \\delta \\lambda$')
     plot.set_ylabel('SNR')
 
     for observer, resolutions_and_snrs in sorted(snr_by_observer.items()):
@@ -430,7 +430,7 @@ def plot_diff(args_cmap, args_output, diff_image_name, diffs_by_phase, disc_rang
     plot.set_ylim(-0.5, 1.5)
     plot.set_xlim(disc_range.lower_bound(), disc_range.upper_bound())
     plot.set_ylabel('Phase')
-    plot.set_xlabel('Wavelength ($\AA$)')
+    plot.set_xlabel('Wavelength ($\\AA$)')
     for diff in diffs_by_phase:
 
         assert len(diff.wavelength) == len(diff.diff)

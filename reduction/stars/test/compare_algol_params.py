@@ -2,7 +2,13 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import AutoDateFormatter, AutoDateLocator
 
 from reduction.plotting import setup_presentation_plots
-from reduction.stars.algol import *
+from astropy.time import Time
+import astropy.units as u
+
+from reduction.stars.algol import (
+    unknown, kosmos_himmeljahr, interstellarum, filipe_diaz, gcvs,
+    zavala_2010, zavala2010_via_baron2012, baron2012,
+    aavso_my, aavso_self)
 
 
 def plot_comparison():
@@ -18,7 +24,7 @@ def plot_comparison():
     plt.axhline(y=0)
 
     for var in [unknown, kosmos_himmeljahr, interstellarum, filipe_diaz, gcvs,
-                zavala_2010, zavala2010_via_aaron2012, baron2012,
+                zavala_2010, zavala2010_via_baron2012, baron2012,
                 aavso_my, aavso_self]:
         var.plot(plot, now, than)
 

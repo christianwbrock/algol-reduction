@@ -9,13 +9,12 @@ from datetime import datetime, timezone
 import astropy.units as u
 import numpy as np
 from astroplan import Observer
-from astropy.coordinates import EarthLocation, SkyCoord
 from astropy.time import Time
 from icalendar import Calendar, Event
 
-from reduction.commandline import time_parser, get_time_from_args, time_delta_parser, get_time_delta_from_args
-from reduction.commandline import sky_coordinate_parser, get_sky_coord_from_args
 from reduction.commandline import earth_location_parser, get_earth_location_from_args
+from reduction.commandline import sky_coordinate_parser, get_sky_coord_from_args
+from reduction.commandline import time_parser, get_time_from_args, time_delta_parser, get_time_delta_from_args
 from reduction.commandline import verbose_parser, get_loglevel
 from reduction.stars.variable_stars import RegularVariableObject
 

@@ -19,5 +19,3 @@ def test_model():
 
     res = h_alpha(np.linspace(xmin, xmax))
     assert np.logical_and(0.0 <= res, res <= 1.0).all()
-
-

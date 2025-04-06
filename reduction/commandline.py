@@ -2,9 +2,10 @@
 Collections of tools helpful to implement __main__ methods.
 """
 
-from typing import Iterable
 from argparse import ArgumentParser
 from logging import Logger
+from typing import Iterable
+
 from astropy.coordinates import EarthLocation
 
 # -------------------- verbose --------------------
@@ -141,6 +142,7 @@ def time_delta_parser(prefix, description=None, default=None):
 
     return res
 
+
 def get_time_from_args(args, prefix, required=True):
     """
     Create an astropy.time.Time value from argument crated via time_parser.
@@ -167,7 +169,7 @@ def get_time_from_args(args, prefix, required=True):
     # some formats , e.g. jd have problems with strings
     try:
         val = float(val)
-    except:
+    except:  # noqa: E722
         pass
 
     if required and not val:
@@ -259,7 +261,6 @@ def earth_location_parser():
     :param default: default for earth coordinate
     :return: an argument parser
     """
-    from astropy.coordinates import EarthLocation
 
     parser = ArgumentParser(add_help=False)
 

@@ -18,7 +18,8 @@ setup_presentation_plots()
 
 
 filenames = [
-    ('Algol2017/data/Periode_2017_2018/Uwe_Zurmuehl/2017_10_16/Algol_AT1B1Or_TOGi+Blk_171016_C1g2_ED80_434_72m60s_6104-6950lc-noh2o.fits',
+    ('Algol2017/data/Periode_2017_2018/Uwe_Zurmuehl/2017_10_16/'
+        'Algol_AT1B1Or_TOGi+Blk_171016_C1g2_ED80_434_72m60s_6104-6950lc-noh2o.fits',
      'Transmission grating'),
     ('Algol2017/data/Periode_2017_2018/Bernd/2017_10_19/Algol_2017_10_19_04-noh2o.fit', 'Lhires III'),
     ('Algol2017/data/Periode_2015_2016/Ulrich_Waldschläger_CT/algol_2015_10_10-noh2o_uw.fit', 'Czerny Turner'),
@@ -97,7 +98,10 @@ def plot_normalization():
 
         plot = fig.add_subplot(2, 2, n)
 
-        normalization = normalize(xs, ys, ref_ys=model(xs), degree_or_range=polynomial_degree, continuum_ranges=continuum_ranges)
+        normalization = normalize(xs, ys,
+                                  ref_ys=model(xs),
+                                  degree_or_range=polynomial_degree,
+                                  continuum_ranges=continuum_ranges)
 
         normalization.plot(plot)
         plot.set_xlim(h_alpha_range.lower_bound() - 5, h_alpha_range.upper_bound() + 5)
@@ -142,8 +146,11 @@ def plot_diff():
         model.redshift.fixed = True
         model.sigma.fixed = True
 
-        normalization = normalize(xs, ys, ref_ys=model(xs), degree_or_range=polynomial_degree, continuum_ranges=continuum_ranges)
-        
+        normalization = normalize(xs, ys,
+                                  ref_ys=model(xs),
+                                  degree_or_range=polynomial_degree,
+                                  continuum_ranges=continuum_ranges)
+
         plot = fig.add_subplot(4, 2, n+0 if n <= 2 else n+2)
 
         plot.set_xlim(h_alpha_range.lower_bound() - 5, h_alpha_range.upper_bound() + 5)
@@ -196,7 +203,10 @@ def plot_diff_error():
     model.redshift.fixed = True
     model.sigma.fixed = True
 
-    normalization_correct = normalize(xs, ys, ref_ys=model(xs), degree_or_range=polynomial_degree, continuum_ranges=continuum_ranges)
+    normalization_correct = normalize(xs, ys,
+                                      ref_ys=model(xs),
+                                      degree_or_range=polynomial_degree,
+                                      continuum_ranges=continuum_ranges)
 
     for column, delta_rs in enumerate(np.linspace(-0.2, 0.2, 5)):
         for row, delta_resol in enumerate(np.linspace(-3000, 3000, 5)):
@@ -207,11 +217,14 @@ def plot_diff_error():
             model_error.redshift.fixed = True
             model_error.sigma.fixed = True
 
-            normalization_error = normalize(xs, ys, ref_ys=model_error(xs), degree_or_range=polynomial_degree, continuum_ranges=continuum_ranges)
+            normalization_error = normalize(xs, ys,
+                                            ref_ys=model_error(xs),
+                                            degree_or_range=polynomial_degree,
+                                            continuum_ranges=continuum_ranges)
 
             plot = fig.add_subplot(5, 5, 1 + 5 * row + column)
 
-            if column==2 and row==2:
+            if column == 2 and row == 2:
                 plot.plot(xs, normalization_correct.norm - model(xs), '-', color='tab:green')
             else:
                 plot.plot(xs, normalization_correct.norm - model(xs), ':', color='tab:green')

@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class AlgolHAlphaModel(FittableSpectrum):
     """
     Fittable model of the H_alpha absorption line of AlgolA
-    
+
     Measurements can be fitted be determining the redshift, scale and measurement error.
     Please note that evaluate generates nan entries outside the definition of the reference spectrum.
     You have to use a Fitter able to handle such nan return values.

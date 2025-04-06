@@ -1,13 +1,10 @@
-
-from math import isnan
-
 import numpy as np
 
 
 def nan_leastsquare(measured_vals, updated_model, weights, x, y=None):
     """
     Least square statistic with optional weights.
-    
+
     This function is a copy of the original astropy code handling nan values.
 
     Parameters

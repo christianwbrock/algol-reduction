@@ -1,18 +1,14 @@
-import os.path
+import logging
+from functools import lru_cache
 
 import numpy as np
-
 from astropy import units as u
-from astropy.units import Quantity
 from astropy.modeling import Fittable1DModel
 from astropy.modeling.parameters import Parameter
+from astropy.units import Quantity
 
 from reduction.instrument import convolve_with_gauss
 from reduction.spectrum import Spectrum
-
-from functools import lru_cache
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -84,13 +80,13 @@ class FittableSpectrum(Fittable1DModel):
     def __str__(self):
         rep = ""
         if not self.redshift.fixed:
-            rep += "redshift=$%.1f \AA$ " % self.redshift[0]
+            rep += "redshift=$%.1f \\AA$ " % self.redshift[0]
         if not self.scale.fixed:
             rep += "scale=$%.2f$ " % self.scale[0]
         if not self.offset.fixed:
             rep += "offset=$%.2f$ " % self.offset[0]
         if not self.sigma.fixed:
-            rep += "stddev=$%.2f \AA$" % self.sigma[0]
+            rep += "stddev=$%.2f \\AA$" % self.sigma[0]
         return rep
 
     def get_xlimits(self):

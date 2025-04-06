@@ -6,7 +6,7 @@ and store them in fits files having observer and date-obs header fields
 we want to know what phases we have covered.
 """
 
-from typing import *
+from typing import Iterable
 
 import matplotlib.pyplot as plt
 from matplotlib.dates import AutoDateFormatter, AutoDateLocator
@@ -48,7 +48,7 @@ def get_obs_dates_by_observer(filenames: Iterable[str]):
     return dates_by_observer
 
 
-def show_time_line(star, dates_by_observer: Dict[str, List[Time]], plot: plt):
+def show_time_line(star, dates_by_observer: dict[str, list[Time]], plot: plt):
     for obs, times in sorted(dates_by_observer.items()):
         plot_dates = [time.plot_date for time, _ in times]
         phases = [star.phase_at(time) for time, _ in times]

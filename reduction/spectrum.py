@@ -230,7 +230,7 @@ class Spectrum:
 
                 unit = header.get("CUNIT1")
 
-                assert len(data) == nbr_meas,\
+                assert len(data) == nbr_meas, \
                     "header field NAXIS1 %d does not match data size %d" % (nbr_meas, len(data))
 
                 obs_date = cls._load_obs_time(hdu)

@@ -36,7 +36,7 @@ filipe_diaz = RegularVariableObject(Time('2017-08-14T03:40:00', format='isot'), 
 
 class Algol:
     """
-    TODO: verify definition of period 
+    TODO: verify definition of period
     """
 
     def __init__(self):
@@ -71,7 +71,7 @@ class Algol:
                                 Omega=132.7
                                 )
 
-        T_A = 12550 * u.K
+        self.T_A = 12550 * u.K
         # T_B = 4900 * K
         # T_C = 7550 * K
 

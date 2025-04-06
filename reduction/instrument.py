@@ -6,9 +6,9 @@ In this module we assume a Gaussian instrument function
 
 from math import ceil
 
-from astropy.units import Unit
 from astropy.convolution import Gaussian1DKernel, Box1DKernel
 from astropy.convolution import convolve
+from astropy.units import Unit
 
 
 def convolve_with_gauss(spectrum, stddev_AA):
@@ -50,4 +50,4 @@ def convolve_with_something(spectrum, stddev_AA, make_kernel):
 
 
 def deconvolve_with_gauss(xs, ys, sigma):
-    raise NotImplemented
+    raise NotImplementedError

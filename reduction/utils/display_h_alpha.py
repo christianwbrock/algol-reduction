@@ -91,7 +91,7 @@ def _arg_parser():
                             fromfile_prefix_chars='@',
                             description="""\
                             Plot results written by fit_three_voigts.
-                            A barycentrically corrected radial velocity is computed from the reference wavelength. 
+                            A barycentrically corrected radial velocity is computed from the reference wavelength.
                             """)
     parser.add_argument("csv_file", help='Result file written by fit_three_voigts')
     parser.add_argument("--reference-wavelength", default=6562.8,
